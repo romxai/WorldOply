@@ -1,6 +1,6 @@
 # Procedural World Generation Application
 
-![World Generation Demo](demo-screenshot.jpg) <!-- Suggest adding a screenshot later -->
+![World Generation Demo](public/image.png)<!-- Suggest adding a screenshot later -->
 
 A sophisticated procedural world generator that creates realistic biomes with elevation, moisture, and temperature systems, plus resource distribution.
 
