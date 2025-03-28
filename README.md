@@ -137,7 +137,7 @@ Key tunable parameters in `config.ts`:
 
 ### Code Structure
 
-'''
+```
 src/
 ├── app/
 │ ├── components/
@@ -148,7 +148,7 @@ src/
 │ │ └── worldGenerator.ts # Core generation logic
 │ └── page.tsx # Main view
 └── styles/ # Global CSS
-'''
+```
 
 ## Future Roadmap
 
