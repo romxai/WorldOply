@@ -24,3 +24,46 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Dock Styles */
+.dock-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s, opacity 0.3s ease-in-out;
+  pointer-events: none;
+  transform: translateY(5px);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+
+.dock-item:hover .dock-tooltip {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dock-icon {
+  transition: all 0.2s ease-in-out;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.dock-item:hover .dock-icon {
+  transform: scale(1.1);
+  filter: brightness(1.2) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.dock-frame {
+  transition: all 0.2s ease-in-out;
+}
+
+.dock-item:hover .dock-frame {
+  transform: scale(1.1);
+}
+
+.dock-item {
+  position: relative;
+  transition: transform 0.2s ease-in-out;
+}
+
+.dock-item:active {
+  transform: scale(0.95);
+}

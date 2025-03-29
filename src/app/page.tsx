@@ -29,6 +29,7 @@ import {
   DEFAULT_RESOURCE_CONFIGS,
 } from "./components/WorldGenerator/config";
 import GenerationControls from "./components/WorldGenerator/UI/GenerationControls";
+import Dock from "./components/UI/Dock";
 
 export default function Home() {
   // Basic settings
@@ -207,10 +208,11 @@ export default function Home() {
     });
   };
 
-return (
+  return (
     <main className="flex min-h-screen flex-col bg-gray-900 text-white">
       <div className="flex-1 p-0 overflow-hidden">
         <WorldMap {...currentGenParams} />
+        <Dock />
       </div>
     </main>
   );
