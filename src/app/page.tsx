@@ -207,104 +207,10 @@ export default function Home() {
     });
   };
 
-  return (
+return (
     <main className="flex min-h-screen flex-col bg-gray-900 text-white">
-      <div className="p-4 bg-black bg-opacity-50 shadow-md mb-4 w-full">
-        <h1 className="text-2xl font-bold">Procedural World Generator</h1>
-        <div className="mt-2 flex justify-between items-center">
-          <button
-            onClick={() => setShowControls(!showControls)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
-          >
-            {showControls ? "Hide Controls" : "Show Controls"}
-          </button>
-          <div>
-            <button
-              onClick={generateNewSeed}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition mr-2"
-            >
-              Generate New World
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col md:flex-row">
-        {showControls && (
-          <div className="w-full md:w-1/3 lg:w-1/4 overflow-y-auto max-h-screen p-4 bg-gray-800">
-            <GenerationControls
-              // Basic properties
-              seed={seed}
-              setSeed={setSeed}
-              visualizationMode={visualizationMode}
-              setVisualizationMode={setVisualizationMode}
-              // Noise properties
-              noiseDetail={noiseDetail}
-              setNoiseDetail={setNoiseDetail}
-              noiseFalloff={noiseFalloff}
-              setNoiseFalloff={setNoiseFalloff}
-              elevationOctaves={elevationOctaves}
-              setElevationOctaves={setElevationOctaves}
-              moistureOctaves={moistureOctaves}
-              setMoistureOctaves={setMoistureOctaves}
-              elevationScale={elevationScale}
-              setElevationScale={setElevationScale}
-              moistureScale={moistureScale}
-              setMoistureScale={setMoistureScale}
-              elevationPersistence={elevationPersistence}
-              setElevationPersistence={setElevationPersistence}
-              moisturePersistence={moisturePersistence}
-              setMoisturePersistence={setMoisturePersistence}
-              // Climate properties
-              equatorPosition={equatorPosition}
-              setEquatorPosition={setEquatorPosition}
-              temperatureVariance={temperatureVariance}
-              setTemperatureVariance={setTemperatureVariance}
-              elevationTempEffect={elevationTempEffect}
-              setElevationTempEffect={setElevationTempEffect}
-              temperatureBandScale={temperatureBandScale}
-              setTemperatureBandScale={setTemperatureBandScale}
-              temperatureNoiseScale={temperatureNoiseScale}
-              setTemperatureNoiseScale={setTemperatureNoiseScale}
-              temperatureNoiseOctaves={temperatureNoiseOctaves}
-              setTemperatureNoiseOctaves={setTemperatureNoiseOctaves}
-              temperatureNoisePersistence={temperatureNoisePersistence}
-              setTemperatureNoisePersistence={setTemperatureNoisePersistence}
-              polarTemperature={polarTemperature}
-              setPolarTemperature={setPolarTemperature}
-              equatorTemperature={equatorTemperature}
-              setEquatorTemperature={setEquatorTemperature}
-              // Radial gradient properties
-              radialCenterX={radialCenterX}
-              setRadialCenterX={setRadialCenterX}
-              radialCenterY={radialCenterY}
-              setRadialCenterY={setRadialCenterY}
-              radialRadius={radialRadius}
-              setRadialRadius={setRadialRadius}
-              radialFalloffExponent={radialFalloffExponent}
-              setRadialFalloffExponent={setRadialFalloffExponent}
-              radialStrength={radialStrength}
-              setRadialStrength={setRadialStrength}
-              // Resource properties
-              resourceConfigs={resourceConfigs}
-              setResourceConfigs={setResourceConfigs}
-              // Actions
-              generateNewSeed={generateNewSeed}
-            />
-            <div className="mt-4">
-              <button
-                onClick={() => handleGenerateWorld()}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition w-full"
-              >
-                Apply Settings
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 p-0 overflow-hidden">
-          <WorldMap {...currentGenParams} />
-        </div>
+      <div className="flex-1 p-0 overflow-hidden">
+        <WorldMap {...currentGenParams} />
       </div>
     </main>
   );

@@ -1,8 +1,8 @@
 // Configuration for the procedurally generated world
 
 // Window dimensions
-export const WINDOW_WIDTH = 1080;
-export const WINDOW_HEIGHT = 720;
+export const WINDOW_WIDTH = window.innerWidth;
+export const WINDOW_HEIGHT = window.innerHeight;
 export const DEFAULT_TILE_SIZE = 16; // Base tile size in pixels
 
 // RGB color interface

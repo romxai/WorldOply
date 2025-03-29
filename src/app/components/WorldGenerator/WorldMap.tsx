@@ -186,6 +186,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
     x: 0,
     y: 0,
   });
+  // Drag state for mouse panning
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
 
   // Visualization state
   const [currentVisualizationMode, setVisualizationMode] =
@@ -239,6 +245,31 @@ const WorldMap: React.FC<WorldMapProps> = ({
     ArrowRight: false,
   });
 
+  // Handle zoom action from zoom buttons
+  const handleZoom = useCallback(
+    (zoomIn: boolean) => {
+      const zoomFactor = zoomIn ? 1.2 : 0.8;
+      let newZoom = camera.zoom * zoomFactor;
+
+      // Calculate the minimum zoom required to keep the map filling the viewport
+      const minZoomX = width / (WORLD_GRID_WIDTH * tileSize);
+      const minZoomY = height / (WORLD_GRID_HEIGHT * tileSize);
+      const dynamicMinZoom = Math.max(minZoomX, minZoomY);
+
+      // Clamp zoom to calculated min and defined max range
+      newZoom = Math.max(
+        Math.max(dynamicMinZoom, MIN_ZOOM),
+        Math.min(MAX_ZOOM, newZoom)
+      );
+
+      if (newZoom !== camera.zoom) {
+        setCamera((prevCamera) => ({ ...prevCamera, zoom: newZoom }));
+        setMapChanged(true);
+      }
+    },
+    [camera.zoom, width, height, tileSize]
+  );
+
   // Handle pan action from navigation buttons - defined BEFORE the keyboard useEffect
   const handlePan = useCallback(
     (direction: "up" | "down" | "left" | "right") => {
@@ -263,31 +294,26 @@ const WorldMap: React.FC<WorldMapProps> = ({
           break;
       }
 
-      // Clamp camera position to world boundaries
-      newX = Math.max(0, Math.min(WORLD_GRID_WIDTH, newX));
-      newY = Math.max(0, Math.min(WORLD_GRID_HEIGHT, newY));
+      // Calculate how many tiles are visible at current zoom level
+      const currentTileSize = tileSize * camera.zoom;
+      const visibleTilesX = width / currentTileSize;
+      const visibleTilesY = height / currentTileSize;
+
+      // Calculate boundaries to ensure map stays visible
+      // This ensures we can't pan beyond half the visible tiles from the map edge
+      const minX = visibleTilesX / 2;
+      const maxX = WORLD_GRID_WIDTH - visibleTilesX / 2;
+      const minY = visibleTilesY / 2;
+      const maxY = WORLD_GRID_HEIGHT - visibleTilesY / 2;
+
+      // Clamp camera position to keep map in view
+      newX = Math.max(minX, Math.min(maxX, newX));
+      newY = Math.max(minY, Math.min(maxY, newY));
 
       setCamera((prevCamera) => ({ ...prevCamera, x: newX, y: newY }));
       setMapChanged(true);
     },
-    [camera.zoom, camera.x, camera.y]
-  );
-
-  // Handle zoom action from zoom buttons
-  const handleZoom = useCallback(
-    (zoomIn: boolean) => {
-      const zoomFactor = zoomIn ? 1.2 : 0.8;
-      let newZoom = camera.zoom * zoomFactor;
-
-      // Clamp zoom to defined min/max range
-      newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-
-      if (newZoom !== camera.zoom) {
-        setCamera((prevCamera) => ({ ...prevCamera, zoom: newZoom }));
-        setMapChanged(true);
-      }
-    },
-    [camera.zoom]
+    [camera.zoom, width, height, tileSize]
   );
 
   // Handle keyboard events for camera movement - now defined AFTER handlePan
@@ -608,9 +634,18 @@ const WorldMap: React.FC<WorldMapProps> = ({
     [camera, tileSize, width, height, calculateTileSize, getVisibleGridCells]
   );
 
-  // Handle mouse movement to show hover tile info
+  // Handle mouse drag for panning
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only start dragging on left mouse button (button 0)
+    if (e.button === 0) {
+      setIsDragging(true);
+      setDragStartPos({ x: e.clientX, y: e.clientY });
+    }
+  }, []);
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      // Update hover info
       const coords = screenToWorldCoords(e.clientX, e.clientY);
       if (!coords) {
         setHoverTileInfo(null);
@@ -624,13 +659,83 @@ const WorldMap: React.FC<WorldMapProps> = ({
       // Get detailed info for this tile
       const tileInfo = worldGeneratorRef.current.getDebugInfo(x, y);
       setHoverTileInfo(tileInfo);
+
+      // Handle dragging
+      if (isDragging) {
+        const dx = e.clientX - dragStartPos.x;
+        const dy = e.clientY - dragStartPos.y;
+
+        // Calculate the new camera position - move in the opposite direction of drag
+        const newX = camera.x - dx / (tileSize * camera.zoom);
+        const newY = camera.y - dy / (tileSize * camera.zoom);
+
+        // Calculate how many tiles are visible at current zoom level
+        const currentTileSize = tileSize * camera.zoom;
+        const visibleTilesX = width / currentTileSize;
+        const visibleTilesY = height / currentTileSize;
+
+        // Calculate boundaries to ensure map stays visible
+        const minX = visibleTilesX / 2;
+        const maxX = WORLD_GRID_WIDTH - visibleTilesX / 2;
+        const minY = visibleTilesY / 2;
+        const maxY = WORLD_GRID_HEIGHT - visibleTilesY / 2;
+
+        // Clamp camera position to keep map in view
+        const clampedX = Math.max(minX, Math.min(maxX, newX));
+        const clampedY = Math.max(minY, Math.min(maxY, newY));
+
+        setCamera((prevCamera) => ({
+          ...prevCamera,
+          x: clampedX,
+          y: clampedY,
+        }));
+        setDragStartPos({ x: e.clientX, y: e.clientY }); // Update drag start position
+        setMapChanged(true);
+      }
     },
-    [screenToWorldCoords]
+    [
+      isDragging,
+      dragStartPos,
+      camera.x,
+      camera.y,
+      camera.zoom,
+      tileSize,
+      width,
+      height,
+      screenToWorldCoords,
+    ]
   );
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (e.button === 0) {
+      // Only handle left mouse button
+      setIsDragging(false);
+    }
+  }, []);
+
+  // Global mouse up handler to release drag even if mouse up occurs outside canvas
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    // Add the event listener to the window
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, []);
 
   // Handle mouse click to select a tile
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
+      // Skip tile selection if we've been dragging
+      if (isDragging) {
+        return;
+      }
+
       const coords = screenToWorldCoords(e.clientX, e.clientY);
       if (!coords) {
         return;
@@ -643,7 +748,36 @@ const WorldMap: React.FC<WorldMapProps> = ({
       const tileInfo = worldGeneratorRef.current.getDebugInfo(x, y);
       setSelectedTileInfo(tileInfo);
     },
-    [screenToWorldCoords]
+    [screenToWorldCoords, isDragging]
+  );
+
+  // Handle mouse wheel for zooming
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+
+      // Determine zoom direction from wheel delta
+      const zoomIn = e.deltaY < 0;
+      const zoomFactor = zoomIn ? 1.05 : 0.95; // Smaller factor for smoother zooming
+      let newZoom = camera.zoom * zoomFactor;
+
+      // Calculate the minimum zoom required to keep the map filling the viewport
+      const minZoomX = width / (WORLD_GRID_WIDTH * tileSize);
+      const minZoomY = height / (WORLD_GRID_HEIGHT * tileSize);
+      const dynamicMinZoom = Math.max(minZoomX, minZoomY);
+
+      // Clamp zoom to calculated min and defined max range
+      newZoom = Math.max(
+        Math.max(dynamicMinZoom, MIN_ZOOM),
+        Math.min(MAX_ZOOM, newZoom)
+      );
+
+      if (newZoom !== camera.zoom) {
+        setCamera((prevCamera) => ({ ...prevCamera, zoom: newZoom }));
+        setMapChanged(true);
+      }
+    },
+    [camera.zoom, width, height, tileSize]
   );
 
   return (
@@ -654,16 +788,22 @@ const WorldMap: React.FC<WorldMapProps> = ({
         height={height}
         onMouseMove={handleMouseMove}
         onClick={handleClick}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
       />
-
+      {/*
       {debug && (
         <div className="absolute top-2 left-2 bg-black bg-opacity-50 p-2 rounded text-white text-xs">
           <div>Seed: {seed}</div>
           <div>Zoom: {camera.zoom.toFixed(2)}</div>
         </div>
       )}
+      */}
 
       {/* Hover tile info panel */}
+      {/*
       {hoverTileInfo && hoverTileCoords && (
         <TileInfoPanel
           tileInfo={hoverTileInfo}
@@ -673,6 +813,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
       )}
 
       {/* Selected tile info panel */}
+
       {selectedTileInfo && selectedTileCoords && (
         <TileInfoPanel
           tileInfo={selectedTileInfo}
@@ -681,8 +822,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
         />
       )}
 
-      {/* Navigation controls */}
+      {/* Navigation controls
       <NavigationControls onPan={handlePan} onZoom={handleZoom} />
+      */}
 
       {/* Progress bar overlay */}
       {isGenerating && <ProgressBar progress={generationProgress} />}
