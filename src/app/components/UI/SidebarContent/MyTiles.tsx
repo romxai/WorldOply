@@ -150,12 +150,12 @@ const MyTiles: React.FC = () => {
   };
 
   return (
-    <div className="font-pixel text-sm">
-      <h1 className="pixel-heading text-xl mb-4">My Territory</h1>
+    <div className="font-pixel text-xs">
+      <h1 className="pixel-heading text-sm mb-3">My Territory</h1>
 
-      <div className="mb-6 flex">
+      <div className="mb-3 flex">
         <button
-          className={`flex-1 py-2 ${
+          className={`flex-1 py-1 text-xxs ${
             activeTab === "tiles"
               ? "bg-yellow-700 text-yellow-100"
               : "bg-yellow-200 text-yellow-900"
@@ -165,7 +165,7 @@ const MyTiles: React.FC = () => {
           My Tiles
         </button>
         <button
-          className={`flex-1 py-2 ${
+          className={`flex-1 py-1 text-xxs ${
             activeTab === "collection"
               ? "bg-yellow-700 text-yellow-100"
               : "bg-yellow-200 text-yellow-900"
@@ -177,20 +177,22 @@ const MyTiles: React.FC = () => {
       </div>
 
       {selectedTile ? (
-        <div className="pixel-panel">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-lg text-yellow-900">{selectedTile.name}</h2>
+        <div className="pixel-panel p-3">
+          <div className="flex justify-between items-start mb-3">
+            <h2 className="text-xs text-yellow-900 font-bold">
+              {selectedTile.name}
+            </h2>
             <button
-              className="bg-yellow-800 text-yellow-100 w-8 h-8 flex items-center justify-center"
+              className="bg-yellow-800 text-yellow-100 w-5 h-5 flex items-center justify-center"
               onClick={() => setSelectedTile(null)}
             >
               ×
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 mb-3">
             <div
-              className={`w-32 h-32 mx-auto md:mx-0 border-4 ${getRarityColor(
+              className={`w-20 h-20 mx-auto sm:mx-0 border-2 ${getRarityColor(
                 selectedTile.rarity
               )}`}
             >
@@ -199,43 +201,37 @@ const MyTiles: React.FC = () => {
                   selectedTile.type
                 )} flex items-center justify-center`}
               >
-                <span className="text-yellow-900 text-xs">
+                <span className="text-yellow-900 text-xxs">
                   {selectedTile.type}
                 </span>
               </div>
             </div>
 
             <div className="flex-1">
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="text-xs">Type:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedTile.type}
-                </div>
+              <div className="grid grid-cols-2 gap-1 text-xxs">
+                <div>Type:</div>
+                <div className="text-yellow-900">{selectedTile.type}</div>
 
-                <div className="text-xs">Rarity:</div>
-                <div className="text-yellow-900 text-xs capitalize">
+                <div>Rarity:</div>
+                <div className="text-yellow-900 capitalize">
                   {selectedTile.rarity}
                 </div>
 
-                <div className="text-xs">Location:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedTile.location}
-                </div>
+                <div>Location:</div>
+                <div className="text-yellow-900">{selectedTile.location}</div>
 
-                <div className="text-xs">Acquired:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedTile.acquired}
-                </div>
+                <div>Acquired:</div>
+                <div className="text-yellow-900">{selectedTile.acquired}</div>
               </div>
             </div>
           </div>
 
-          <div className="mb-4">
-            <h3 className="text-sm text-yellow-900 mb-2">Resources</h3>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="mb-3">
+            <h3 className="text-xxs text-yellow-900 mb-1">Resources</h3>
+            <div className="grid grid-cols-2 gap-2">
               {selectedTile.resources.map((resource, idx) => (
-                <div key={idx} className="pixel-panel bg-yellow-100/50">
-                  <div className="text-yellow-900 text-xs font-bold mb-1">
+                <div key={idx} className="pixel-panel bg-yellow-100/50 p-1">
+                  <div className="text-yellow-900 text-xxs font-bold mb-0.5">
                     {resource.type}
                   </div>
                   <div className="flex justify-between text-xxs">
@@ -253,75 +249,73 @@ const MyTiles: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-4">
-            <h3 className="text-sm text-yellow-900 mb-2">Stats</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="pixel-panel bg-yellow-100/50">
+          <div className="mb-3">
+            <h3 className="text-xxs text-yellow-900 mb-1">Stats</h3>
+            <div className="grid grid-cols-3 gap-1">
+              <div className="pixel-panel bg-yellow-100/50 p-1">
                 <div className="text-center text-xxs">Defense</div>
-                <div className="text-center text-yellow-900 text-lg">
+                <div className="text-center text-yellow-900 text-sm">
                   {selectedTile.stats.defense}
                 </div>
               </div>
-              <div className="pixel-panel bg-yellow-100/50">
+              <div className="pixel-panel bg-yellow-100/50 p-1">
                 <div className="text-center text-xxs">Income</div>
-                <div className="text-center text-yellow-900 text-lg">
+                <div className="text-center text-yellow-900 text-sm">
                   {selectedTile.stats.income}
                 </div>
               </div>
-              <div className="pixel-panel bg-yellow-100/50">
-                <div className="text-center text-xxs">Resource Bonus</div>
-                <div className="text-center text-yellow-900 text-lg">
+              <div className="pixel-panel bg-yellow-100/50 p-1">
+                <div className="text-center text-xxs">Resource</div>
+                <div className="text-center text-yellow-900 text-sm">
                   {selectedTile.stats.resourceBonus}%
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between gap-2">
+          <div className="flex justify-between gap-1">
             <button
-              className={`pixel-button ${
+              className={`pixel-button text-xxs py-1 px-2 ${
                 selectedAction === "upgrade" ? "bg-green-600 text-white" : ""
               }`}
               onClick={() => handleTileAction("upgrade")}
               disabled={selectedAction !== null}
             >
-              {selectedAction === "upgrade" ? "Upgrading..." : "Upgrade"}
+              {selectedAction === "upgrade" ? "..." : "Upgrade"}
             </button>
             <button
-              className={`pixel-button ${
+              className={`pixel-button text-xxs py-1 px-2 ${
                 selectedAction === "harvest" ? "bg-blue-600 text-white" : ""
               }`}
               onClick={() => handleTileAction("harvest")}
               disabled={selectedAction !== null}
             >
-              {selectedAction === "harvest"
-                ? "Harvesting..."
-                : "Harvest Resources"}
+              {selectedAction === "harvest" ? "..." : "Harvest"}
             </button>
             <button
-              className={`pixel-button ${
+              className={`pixel-button text-xxs py-1 px-2 ${
                 selectedAction === "sell" ? "bg-red-500 text-white" : ""
               }`}
               onClick={() => handleTileAction("sell")}
               disabled={selectedAction !== null}
             >
-              {selectedAction === "sell" ? "Selling..." : "Sell"}
+              {selectedAction === "sell" ? "..." : "Sell"}
             </button>
           </div>
         </div>
       ) : (
         <div>
           {activeTab === "tiles" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
               {tiles.map((tile) => (
                 <div
                   key={tile.id}
-                  className="pixel-tile cursor-pointer"
+                  className="p-2 border-2 border-yellow-800 bg-yellow-100/50 cursor-pointer hover:bg-yellow-200/50 transition-colors"
                   onClick={() => setSelectedTile(tile)}
                 >
-                  <div className="flex mb-2">
+                  <div className="flex items-center">
                     <div
-                      className={`w-16 h-16 border-2 ${getRarityColor(
+                      className={`w-8 h-8 border-1 ${getRarityColor(
                         tile.rarity
                       )}`}
                     >
@@ -335,30 +329,34 @@ const MyTiles: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="ml-2 flex-1">
-                      <div className="text-yellow-900 mb-1 truncate">
-                        {tile.name}
+
+                    <div className="ml-2 flex-1 overflow-hidden">
+                      <div className="flex justify-between">
+                        <div className="text-yellow-900 text-xxs font-bold truncate mr-1">
+                          {tile.name}
+                          <span className="ml-1 text-xxs opacity-70 capitalize">
+                            ({tile.rarity})
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-xxs mb-1 capitalize">
-                        {tile.rarity}
-                      </div>
-                      <div className="text-yellow-900 text-xs truncate">
-                        {tile.location}
+
+                      <div className="flex justify-between text-xxs">
+                        <span className="opacity-70">{tile.location}</span>
+                        <div className="flex gap-1 text-xxs">
+                          <span>D:{tile.stats.defense}</span>
+                          <span>I:{tile.stats.income}</span>
+                          <span>R:{tile.stats.resourceBonus}%</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex justify-between text-xxs">
-                    <span>Def: {tile.stats.defense}</span>
-                    <span>Inc: {tile.stats.income}</span>
-                    <span>Res: {tile.stats.resourceBonus}%</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center my-4 text-yellow-800">
-              <p className="mb-4">Collection view coming soon!</p>
-              <div className="grid grid-cols-3 gap-4">
+            <div className="text-center my-3 text-xxs text-yellow-800">
+              <p className="mb-3">Collection view coming soon!</p>
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   "Grassland",
                   "Desert",
@@ -367,20 +365,22 @@ const MyTiles: React.FC = () => {
                   "Forest",
                   "Special",
                 ].map((type, idx) => (
-                  <div key={idx} className="pixel-panel bg-yellow-100/50">
-                    <div className="text-center text-xs mb-2">{type}</div>
-                    <div className="w-12 h-12 mx-auto mb-2 border-2 border-yellow-800 bg-gray-200 flex items-center justify-center">
-                      <span className="text-yellow-900 text-xs">?</span>
+                  <div key={idx} className="pixel-panel p-1 bg-yellow-100/50">
+                    <div className="text-center text-xxs mb-1">{type}</div>
+                    <div className="w-8 h-8 mx-auto mb-1 border-1 border-yellow-800 bg-gray-200 flex items-center justify-center">
+                      <span className="text-yellow-900 text-xxs">?</span>
                     </div>
-                    <div className="text-center text-xxs">Discovered: 0/10</div>
+                    <div className="text-center text-xxs">0/10</div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="flex justify-center mt-6">
-            <button className="pixel-button">Explore New Tiles</button>
+          <div className="flex justify-center mt-3">
+            <button className="pixel-button text-xxs py-1 px-2">
+              Explore New Tiles
+            </button>
           </div>
         </div>
       )}

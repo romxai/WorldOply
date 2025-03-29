@@ -55,18 +55,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, sidebarType, onClose }) => {
   if (!isOpen && animationClass === "-translate-x-full") return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex overflow-hidden pointer-events-none">
-      {/* Semi-transparent overlay - clicks should pass through to map but darkens it slightly */}
+    <div className="fixed inset-0 z-50 flex overflow-hidden">
+      {/* Semi-transparent overlay - darkens the map but doesn't handle clicks */}
       <div
-        className={`absolute inset-0 bg-black transition-opacity duration-300 pointer-events-auto ${
+        className={`absolute inset-0 bg-black transition-opacity duration-300 ${
           isOpen ? "bg-opacity-25" : "bg-opacity-0"
         }`}
-        onClick={onClose}
       />
 
       {/* Sidebar */}
       <div
-        className={`relative w-80 md:w-96 h-full flex-shrink-0 transition-transform duration-300 ease-in-out pointer-events-auto ${animationClass}`}
+        className={`relative w-80 md:w-96 h-full flex-shrink-0 transition-transform duration-300 ease-in-out ${animationClass}`}
       >
         <div className="relative h-full w-full overflow-hidden">
           {/* Background image with preserved jagged edges */}

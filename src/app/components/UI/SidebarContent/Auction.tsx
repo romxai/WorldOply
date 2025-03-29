@@ -30,7 +30,7 @@ const Auction: React.FC = () => {
       minBid: 275,
       timeLeft: "2h 15m",
       bids: 5,
-      image: "/path/to/grassland-tile.png", // Use a colored div as fallback
+      image: "/path/to/grassland-tile.png",
     },
     {
       id: 2,
@@ -226,16 +226,16 @@ const Auction: React.FC = () => {
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="space-y-2">
             {auctions.map((auction) => (
               <div
                 key={auction.id}
                 className="p-2 border-2 border-yellow-800 bg-yellow-100/50 cursor-pointer hover:bg-yellow-200/50 transition-colors"
                 onClick={() => handleAuctionClick(auction)}
               >
-                <div className="flex mb-1">
+                <div className="flex items-center">
                   <div
-                    className={`w-10 h-10 border-1 ${getRarityColor(
+                    className={`w-8 h-8 border-1 ${getRarityColor(
                       auction.rarity
                     )}`}
                   >
@@ -249,21 +249,27 @@ const Auction: React.FC = () => {
                       </span>
                     </div>
                   </div>
+
                   <div className="ml-2 flex-1 overflow-hidden">
-                    <div className="text-yellow-900 text-xxs font-bold mb-0.5 truncate">
-                      {auction.name}
+                    <div className="flex justify-between">
+                      <div className="text-yellow-900 text-xxs font-bold truncate mr-1">
+                        {auction.name}
+                        <span className="ml-1 text-xxs opacity-70 capitalize">
+                          ({auction.rarity})
+                        </span>
+                      </div>
+                      <div className="text-yellow-900 text-xxs font-bold flex-shrink-0">
+                        {auction.currentBid}c
+                      </div>
                     </div>
-                    <div className="text-xxs mb-0.5 capitalize">
-                      {auction.rarity}
-                    </div>
-                    <div className="text-yellow-900 text-xxs">
-                      {auction.currentBid} coins
+
+                    <div className="flex justify-between text-xxs">
+                      <span className="opacity-70">
+                        {auction.timeLeft} left
+                      </span>
+                      <span className="opacity-70">{auction.bids} bids</span>
                     </div>
                   </div>
-                </div>
-                <div className="flex justify-between text-xxs">
-                  <span>{auction.timeLeft} left</span>
-                  <span>{auction.bids} bids</span>
                 </div>
               </div>
             ))}

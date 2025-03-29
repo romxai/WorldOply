@@ -145,24 +145,26 @@ const Marketplace: React.FC = () => {
     );
 
   return (
-    <div className="font-pixel text-sm">
-      <h1 className="pixel-heading text-xl mb-4">Marketplace</h1>
+    <div className="font-pixel text-xs">
+      <h1 className="pixel-heading text-sm mb-3">Marketplace</h1>
 
       {selectedItem ? (
-        <div className="pixel-panel">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-lg text-yellow-900">{selectedItem.name}</h2>
+        <div className="pixel-panel p-3">
+          <div className="flex justify-between items-start mb-3">
+            <h2 className="text-xs text-yellow-900 font-bold">
+              {selectedItem.name}
+            </h2>
             <button
-              className="bg-yellow-800 text-yellow-100 w-8 h-8 flex items-center justify-center"
+              className="bg-yellow-800 text-yellow-100 w-5 h-5 flex items-center justify-center"
               onClick={() => setSelectedItem(null)}
             >
               ×
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 mb-3">
             <div
-              className={`w-32 h-32 mx-auto md:mx-0 border-4 ${getRarityColor(
+              className={`w-24 h-24 mx-auto sm:mx-0 border-2 ${getRarityColor(
                 selectedItem.rarity
               )}`}
             >
@@ -171,48 +173,42 @@ const Marketplace: React.FC = () => {
                   selectedItem.type
                 )} flex items-center justify-center`}
               >
-                <span className="text-yellow-900 text-xs">
+                <span className="text-yellow-900 text-xxs">
                   {selectedItem.type}
                 </span>
               </div>
             </div>
 
             <div className="flex-1">
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="text-xs">Type:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedItem.type}
-                </div>
+              <div className="grid grid-cols-2 gap-1 text-xxs mb-2">
+                <div>Type:</div>
+                <div className="text-yellow-900">{selectedItem.type}</div>
 
-                <div className="text-xs">Rarity:</div>
-                <div className="text-yellow-900 text-xs capitalize">
+                <div>Rarity:</div>
+                <div className="text-yellow-900 capitalize">
                   {selectedItem.rarity}
                 </div>
 
-                <div className="text-xs">Seller:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedItem.seller}
-                </div>
+                <div>Seller:</div>
+                <div className="text-yellow-900">{selectedItem.seller}</div>
 
-                <div className="text-xs">Listed:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedItem.listedDate}
-                </div>
+                <div>Listed:</div>
+                <div className="text-yellow-900">{selectedItem.listedDate}</div>
               </div>
 
-              <div className="text-xs mb-2">Description:</div>
-              <div className="text-yellow-900 text-xs border-2 border-yellow-800 p-2 mb-3 bg-yellow-100/50">
+              <div className="text-xxs mb-1">Description:</div>
+              <div className="text-yellow-900 text-xxs border-1 border-yellow-800 p-1 mb-2 bg-yellow-100/50">
                 {selectedItem.description}
               </div>
             </div>
           </div>
 
           <div className="flex justify-between items-center">
-            <div className="font-bold text-lg text-yellow-900">
+            <div className="font-bold text-xs text-yellow-900">
               {selectedItem.price} coins
             </div>
             <button
-              className="pixel-button"
+              className="pixel-button text-xxs py-1 px-2"
               onClick={() => handlePurchase(selectedItem)}
             >
               Purchase
@@ -221,18 +217,18 @@ const Marketplace: React.FC = () => {
         </div>
       ) : (
         <div>
-          <div className="pixel-panel mb-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="pixel-panel mb-3 p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <div className="flex-1">
               <input
                 type="text"
                 placeholder="Search tiles..."
-                className="w-full p-2 border-2 border-yellow-800 font-pixel text-xs"
+                className="w-full p-1 border-1 border-yellow-800 font-pixel text-xxs"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <select
-              className="border-2 border-yellow-800 p-2 font-pixel text-xs bg-yellow-100"
+              className="border-1 border-yellow-800 p-1 font-pixel text-xxs bg-yellow-100"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             >
@@ -245,16 +241,16 @@ const Marketplace: React.FC = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div className="space-y-2 mb-3">
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="pixel-tile cursor-pointer"
+                className="p-2 border-2 border-yellow-800 bg-yellow-100/50 cursor-pointer hover:bg-yellow-200/50 transition-colors"
                 onClick={() => setSelectedItem(item)}
               >
-                <div className="flex mb-2">
+                <div className="flex items-center">
                   <div
-                    className={`w-16 h-16 border-2 ${getRarityColor(
+                    className={`w-8 h-8 border-1 ${getRarityColor(
                       item.rarity
                     )}`}
                   >
@@ -268,35 +264,43 @@ const Marketplace: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="ml-2 flex-1">
-                    <div className="text-yellow-900 mb-1 truncate">
-                      {item.name}
+
+                  <div className="ml-2 flex-1 overflow-hidden">
+                    <div className="flex justify-between">
+                      <div className="text-yellow-900 text-xxs font-bold truncate mr-1">
+                        {item.name}
+                        <span className="ml-1 text-xxs opacity-70 capitalize">
+                          ({item.rarity})
+                        </span>
+                      </div>
+                      <div className="text-yellow-900 text-xxs font-bold flex-shrink-0">
+                        {item.price}c
+                      </div>
                     </div>
-                    <div className="text-xxs mb-1 capitalize">
-                      {item.rarity}
-                    </div>
-                    <div className="text-yellow-900 text-xs font-bold">
-                      {item.price} coins
+
+                    <div className="flex justify-between text-xxs">
+                      <span className="opacity-70">Seller: {item.seller}</span>
+                      <span className="opacity-70">{item.listedDate}</span>
                     </div>
                   </div>
-                </div>
-                <div className="flex justify-between text-xxs">
-                  <span>Seller: {item.seller}</span>
-                  <span>{item.listedDate}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {filteredItems.length === 0 && (
-            <div className="text-center text-yellow-800 my-6">
+            <div className="text-center text-yellow-800 my-3 text-xxs">
               No matching tiles found. Try adjusting your search.
             </div>
           )}
 
-          <div className="flex justify-center gap-4">
-            <button className="pixel-button">My Listings</button>
-            <button className="pixel-button">Sell Tile</button>
+          <div className="flex justify-center gap-3">
+            <button className="pixel-button text-xxs py-1 px-2">
+              My Listings
+            </button>
+            <button className="pixel-button text-xxs py-1 px-2">
+              Sell Tile
+            </button>
           </div>
         </div>
       )}
