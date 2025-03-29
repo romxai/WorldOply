@@ -56,13 +56,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, sidebarType, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex overflow-hidden">
-      {/* Semi-transparent overlay - darkens the map but doesn't handle clicks */}
-      <div
-        className={`absolute inset-0 bg-black transition-opacity duration-300 ${
-          isOpen ? "bg-opacity-25" : "bg-opacity-0"
-        }`}
-      />
-
       {/* Sidebar */}
       <div
         className={`relative w-80 md:w-96 h-full flex-shrink-0 transition-transform duration-300 ease-in-out ${animationClass}`}
@@ -82,14 +75,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, sidebarType, onClose }) => {
 
           {/* Close button */}
           <button
-            className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-yellow-800 rounded-md pixel-border"
+            className="absolute top-6 right-4 z-10 w-8 h-8 flex items-center justify-center bg-yellow-800 rounded-md pixel-border"
             onClick={onClose}
           >
-            <span className="font-pixel text-xl text-yellow-100">×</span>
+            <span className="font-pixel text-xl text-yellow-100 leading-none">
+              ×
+            </span>
           </button>
 
           {/* Content */}
-          <div className="absolute inset-0 p-5 overflow-y-auto pixel-scroll">
+          <div className="absolute inset-0 px-5 py-15 overflow-y-auto pixel-scroll">
             <div className="relative z-10 text-yellow-900">
               {renderContent()}
             </div>
