@@ -7,49 +7,48 @@ interface LogoutProps {
 
 const Logout: React.FC<LogoutProps> = ({ onConfirm }) => {
   return (
-    <div className="font-pixel text-sm">
-      <h1 className="pixel-heading text-xl mb-6">Logout Confirmation</h1>
+    <div className="font-pixel text-xs">
+      <h1 className="pixel-heading text-sm mb-3">Logout Confirmation</h1>
 
-      <div className="pixel-panel mb-6">
-        <div className="flex justify-center mb-4">
-          <div className="w-24 h-24 border-4 border-yellow-800 bg-red-200 flex items-center justify-center">
-            <span className="text-4xl text-red-600">!</span>
+      <div className="pixel-panel p-3 mb-3">
+        <div className="flex justify-center mb-3">
+          <div className="w-16 h-16 border-2 border-yellow-800 bg-red-200 flex items-center justify-center">
+            <span className="text-2xl text-red-600">!</span>
           </div>
         </div>
 
-        <p className="text-center text-yellow-900 mb-6">
+        <p className="text-center text-yellow-900 mb-3 text-xs">
           Are you sure you want to log out of the game?
         </p>
 
-        <p className="text-center text-xxs text-yellow-800 mb-8">
+        <p className="text-center text-xxs text-yellow-800 mb-4">
           Your progress is automatically saved, but any ongoing activities will
           be canceled.
         </p>
 
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-center gap-2">
           <button
-            className="pixel-button bg-red-500 text-white"
+            className="pixel-button text-xxs py-1 px-2 bg-red-500 text-yellow-100"
             onClick={onConfirm}
           >
             Yes, Log Out
           </button>
           <button
-            className="pixel-button"
+            className="pixel-button text-xxs py-1 px-2"
             onClick={onConfirm} // In real app, this would just close the dialog
           >
-            No, Continue Playing
+            No, Continue
           </button>
         </div>
       </div>
 
-      <div className="text-center text-xxs text-yellow-800 mb-8">
-        Remember: Your account and all your tiles will be waiting for you when
-        you return!
+      <div className="text-center text-xxs text-yellow-800 mb-3">
+        Your account and tiles will be waiting when you return!
       </div>
 
       <div className="flex justify-center">
         <button
-          className="text-xs text-yellow-900 underline"
+          className="text-xxs text-yellow-900 underline"
           onClick={() => console.log("Help clicked")}
         >
           Need help? Contact Support

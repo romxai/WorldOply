@@ -124,24 +124,26 @@ const Auction: React.FC = () => {
   };
 
   return (
-    <div className="font-pixel text-sm">
-      <h1 className="pixel-heading text-xl mb-6">Auction House</h1>
+    <div className="font-pixel text-xs">
+      <h1 className="pixel-heading text-sm mb-3">Auction House</h1>
 
       {selectedAuction ? (
-        <div className="pixel-panel">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-lg text-yellow-900">{selectedAuction.name}</h2>
+        <div className="pixel-panel p-3">
+          <div className="flex justify-between items-start mb-3">
+            <h2 className="text-xs text-yellow-900 font-bold">
+              {selectedAuction.name}
+            </h2>
             <button
-              className="bg-yellow-800 text-yellow-100 w-8 h-8 flex items-center justify-center"
+              className="bg-yellow-800 text-yellow-100 w-5 h-5 flex items-center justify-center"
               onClick={() => setSelectedAuction(null)}
             >
               ×
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 mb-3">
             <div
-              className={`w-32 h-32 mx-auto md:mx-0 border-4 ${getRarityColor(
+              className={`w-24 h-24 mx-auto sm:mx-0 border-2 ${getRarityColor(
                 selectedAuction.rarity
               )}`}
             >
@@ -150,47 +152,43 @@ const Auction: React.FC = () => {
                   selectedAuction.type
                 )} flex items-center justify-center`}
               >
-                <span className="text-yellow-900 text-xs">
+                <span className="text-yellow-900 text-xxs">
                   {selectedAuction.type}
                 </span>
               </div>
             </div>
 
             <div className="flex-1">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-xs">Type:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedAuction.type}
-                </div>
+              <div className="grid grid-cols-2 gap-1 text-xxs">
+                <div>Type:</div>
+                <div className="text-yellow-900">{selectedAuction.type}</div>
 
-                <div className="text-xs">Rarity:</div>
-                <div className="text-yellow-900 text-xs capitalize">
+                <div>Rarity:</div>
+                <div className="text-yellow-900 capitalize">
                   {selectedAuction.rarity}
                 </div>
 
-                <div className="text-xs">Current Bid:</div>
-                <div className="text-yellow-900 text-xs">
+                <div>Current Bid:</div>
+                <div className="text-yellow-900">
                   {selectedAuction.currentBid} coins
                 </div>
 
-                <div className="text-xs">Time Left:</div>
-                <div className="text-yellow-900 text-xs">
+                <div>Time Left:</div>
+                <div className="text-yellow-900">
                   {selectedAuction.timeLeft}
                 </div>
 
-                <div className="text-xs">Bids:</div>
-                <div className="text-yellow-900 text-xs">
-                  {selectedAuction.bids}
-                </div>
+                <div>Bids:</div>
+                <div className="text-yellow-900">{selectedAuction.bids}</div>
               </div>
             </div>
           </div>
 
-          <div className="mb-4">
-            <div className="text-center mb-2">Place Your Bid</div>
+          <div className="mb-3">
+            <div className="text-center text-xxs mb-1">Place Your Bid</div>
             <div className="flex items-center justify-between">
               <button
-                className="pixel-button text-sm w-8 h-8 p-0 flex items-center justify-center"
+                className="pixel-button text-xxs w-6 h-6 p-0 flex items-center justify-center"
                 onClick={() =>
                   setBidAmount((prev) =>
                     Math.max(selectedAuction.minBid, prev - 25)
@@ -199,11 +197,11 @@ const Auction: React.FC = () => {
               >
                 -
               </button>
-              <div className="pixel-panel flex-1 mx-2 text-center">
+              <div className="pixel-panel flex-1 mx-2 text-center p-1 text-xxs">
                 {bidAmount} coins
               </div>
               <button
-                className="pixel-button text-sm w-8 h-8 p-0 flex items-center justify-center"
+                className="pixel-button text-xxs w-6 h-6 p-0 flex items-center justify-center"
                 onClick={() => setBidAmount((prev) => prev + 25)}
               >
                 +
@@ -213,13 +211,13 @@ const Auction: React.FC = () => {
 
           <div className="flex justify-between gap-2">
             <button
-              className="pixel-button bg-red-500 text-white"
+              className="pixel-button text-xxs py-1 px-2 bg-red-500 text-yellow-100"
               onClick={() => setSelectedAuction(null)}
             >
               Cancel
             </button>
             <button
-              className="pixel-button"
+              className="pixel-button text-xxs py-1 px-2"
               onClick={() => handleBid(selectedAuction)}
             >
               Place Bid
@@ -228,16 +226,16 @@ const Auction: React.FC = () => {
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {auctions.map((auction) => (
               <div
                 key={auction.id}
-                className="pixel-tile cursor-pointer"
+                className="p-2 border-2 border-yellow-800 bg-yellow-100/50 cursor-pointer hover:bg-yellow-200/50 transition-colors"
                 onClick={() => handleAuctionClick(auction)}
               >
-                <div className="flex mb-2">
+                <div className="flex mb-1">
                   <div
-                    className={`w-16 h-16 border-2 ${getRarityColor(
+                    className={`w-10 h-10 border-1 ${getRarityColor(
                       auction.rarity
                     )}`}
                   >
@@ -251,14 +249,14 @@ const Auction: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="ml-2 flex-1">
-                    <div className="text-yellow-900 mb-1 truncate">
+                  <div className="ml-2 flex-1 overflow-hidden">
+                    <div className="text-yellow-900 text-xxs font-bold mb-0.5 truncate">
                       {auction.name}
                     </div>
-                    <div className="text-xxs mb-1 capitalize">
+                    <div className="text-xxs mb-0.5 capitalize">
                       {auction.rarity}
                     </div>
-                    <div className="text-yellow-900 text-xs">
+                    <div className="text-yellow-900 text-xxs">
                       {auction.currentBid} coins
                     </div>
                   </div>
@@ -271,8 +269,8 @@ const Auction: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex justify-center mt-6">
-            <button className="pixel-button">My Bids</button>
+          <div className="flex justify-center mt-3">
+            <button className="pixel-button text-xxs py-1 px-2">My Bids</button>
           </div>
         </div>
       )}

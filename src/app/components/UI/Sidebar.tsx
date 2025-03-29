@@ -55,39 +55,43 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, sidebarType, onClose }) => {
   if (!isOpen && animationClass === "-translate-x-full") return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex overflow-hidden">
-      {/* Overlay */}
+    <div className="fixed inset-0 z-50 flex overflow-hidden pointer-events-none">
+      {/* Semi-transparent overlay - clicks should pass through to map but darkens it slightly */}
       <div
-        className={`absolute inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "opacity-0"
+        className={`absolute inset-0 bg-black transition-opacity duration-300 pointer-events-auto ${
+          isOpen ? "bg-opacity-25" : "bg-opacity-0"
         }`}
         onClick={onClose}
       />
 
       {/* Sidebar */}
       <div
-        className={`relative w-80 md:w-96 h-full flex-shrink-0 transition-transform duration-300 ease-in-out ${animationClass}`}
+        className={`relative w-80 md:w-96 h-full flex-shrink-0 transition-transform duration-300 ease-in-out pointer-events-auto ${animationClass}`}
       >
-        <div className="relative h-full w-full">
-          <Image
-            src="/assets/page.png"
-            alt="Sidebar Background"
-            fill
-            className="object-cover"
-            priority
-          />
+        <div className="relative h-full w-full overflow-hidden">
+          {/* Background image with preserved jagged edges */}
+          <div className="absolute inset-0 flex">
+            <Image
+              src="/assets/page.png"
+              alt="Sidebar Background"
+              fill
+              className="object-fill"
+              priority
+              style={{ objectPosition: "left" }}
+            />
+          </div>
 
           {/* Close button */}
           <button
-            className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-brown-800 rounded-md pixel-border"
+            className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center bg-yellow-800 rounded-md pixel-border"
             onClick={onClose}
           >
             <span className="font-pixel text-xl text-yellow-100">×</span>
           </button>
 
           {/* Content */}
-          <div className="absolute inset-0 p-6 overflow-y-auto pixel-scroll">
-            <div className="relative z-10 text-brown-900">
+          <div className="absolute inset-0 p-5 overflow-y-auto pixel-scroll">
+            <div className="relative z-10 text-yellow-900">
               {renderContent()}
             </div>
           </div>
