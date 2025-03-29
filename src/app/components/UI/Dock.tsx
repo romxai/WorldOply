@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
+import Sidebar, { SidebarType } from "./Sidebar";
 
 // SVG icon components
 const ProfileIcon = () => (
@@ -150,54 +151,74 @@ const DockItem: React.FC<DockItemProps> = ({ icon, label, onClick }) => {
 };
 
 const Dock: React.FC = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSidebar, setActiveSidebar] = useState<SidebarType>(null);
+
+  const openSidebar = (type: SidebarType) => {
+    setActiveSidebar(type);
+    setSidebarOpen(true);
+  };
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
   const dockItems = [
     {
       icon: <ProfileIcon />,
       label: "User Profile",
-      onClick: () => console.log("User Profile clicked"),
+      onClick: () => openSidebar("profile"),
     },
     {
       icon: <AuctionIcon />,
       label: "Auction House",
-      onClick: () => console.log("Auction House clicked"),
+      onClick: () => openSidebar("auction"),
     },
     {
       icon: <MarketplaceIcon />,
       label: "Marketplace",
-      onClick: () => console.log("Marketplace clicked"),
+      onClick: () => openSidebar("marketplace"),
     },
     {
       icon: <TilesIcon />,
       label: "My Tiles",
-      onClick: () => console.log("My Tiles clicked"),
+      onClick: () => openSidebar("myTiles"),
     },
     {
       icon: <SettingsIcon />,
       label: "Settings",
-      onClick: () => console.log("Settings clicked"),
+      onClick: () => openSidebar("settings"),
     },
     {
       icon: <LogoutIcon />,
       label: "Logout",
-      onClick: () => console.log("Logout clicked"),
+      onClick: () => openSidebar("logout"),
     },
   ];
 
   return (
-    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 px-2">
-      <div className="flex items-center justify-center rounded-lg">
-        <div className="flex flex-wrap sm:flex-nowrap justify-center">
-          {dockItems.map((item, index) => (
-            <DockItem
-              key={index}
-              icon={item.icon}
-              label={item.label}
-              onClick={item.onClick}
-            />
-          ))}
+    <>
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 px-2">
+        <div className="flex items-center justify-center rounded-lg">
+          <div className="flex flex-wrap sm:flex-nowrap justify-center">
+            {dockItems.map((item, index) => (
+              <DockItem
+                key={index}
+                icon={item.icon}
+                label={item.label}
+                onClick={item.onClick}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        sidebarType={activeSidebar} 
+        onClose={closeSidebar} 
+      />
+    </>
   );
 };
 

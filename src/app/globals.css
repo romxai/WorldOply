@@ -1,8 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --pixel-brown: #8b572a;
+  --pixel-light-brown: #c69c6d;
+  --pixel-dark-brown: #63381f;
+  --pixel-yellow: #f8d878;
+  --pixel-light-yellow: #fff5d8;
 }
 
 @theme inline {
@@ -66,4 +72,104 @@ body {
 
 .dock-item:active {
   transform: scale(0.95);
+}
+
+/* Pixel Art Styles */
+.font-pixel {
+  font-family: "Press Start 2P", cursive;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
+.pixel-border {
+  image-rendering: pixelated;
+  box-shadow: 0 4px 0 0 var(--pixel-dark-brown),
+    inset 0 0 0 2px var(--pixel-light-brown);
+  border: 2px solid var(--pixel-brown);
+  image-rendering: pixelated;
+}
+
+.pixel-button {
+  font-family: "Press Start 2P", cursive;
+  background-color: var(--pixel-yellow);
+  color: var(--pixel-dark-brown);
+  border: 0;
+  padding: 0.5rem 1rem;
+  image-rendering: pixelated;
+  box-shadow: 0 4px 0 0 var(--pixel-dark-brown),
+    inset 0 0 0 2px var(--pixel-light-yellow);
+  border: 2px solid var(--pixel-brown);
+  transition: all 0.1s;
+  text-shadow: 1px 1px 0 var(--pixel-light-yellow);
+  position: relative;
+  top: 0;
+}
+
+.pixel-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 0 var(--pixel-dark-brown),
+    inset 0 0 0 2px var(--pixel-light-yellow);
+}
+
+.pixel-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 0 var(--pixel-dark-brown),
+    inset 0 0 0 2px var(--pixel-light-yellow);
+}
+
+.pixel-panel {
+  background-color: var(--pixel-light-brown);
+  border: 4px solid var(--pixel-brown);
+  box-shadow: 0 0 0 4px var(--pixel-light-yellow),
+    inset 0 0 0 2px var(--pixel-dark-brown);
+  image-rendering: pixelated;
+  padding: 1rem;
+}
+
+.pixel-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.pixel-scroll::-webkit-scrollbar-track {
+  background: var(--pixel-light-yellow);
+  border: 2px solid var(--pixel-brown);
+}
+
+.pixel-scroll::-webkit-scrollbar-thumb {
+  background: var(--pixel-brown);
+  border: 2px solid var(--pixel-dark-brown);
+}
+
+.pixel-heading {
+  font-family: "Press Start 2P", cursive;
+  color: var(--pixel-dark-brown);
+  text-shadow: 2px 2px 0 var(--pixel-light-yellow);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.pixel-tile {
+  image-rendering: pixelated;
+  border: 3px solid var(--pixel-brown);
+  background-color: var(--pixel-light-yellow);
+  padding: 0.5rem;
+  position: relative;
+  box-shadow: 4px 4px 0 var(--pixel-dark-brown);
+  transition: all 0.2s;
+}
+
+.pixel-tile:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--pixel-dark-brown);
+}
+
+.pixel-tile:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--pixel-dark-brown);
+}
+
+/* Custom classes */
+.text-xxs {
+  font-size: 0.625rem;
+  line-height: 0.875rem;
 }
