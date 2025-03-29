@@ -51,6 +51,7 @@ import { rgbToString } from "./terrainUtils";
 import ProgressBar from "./UI/ProgressBar";
 import NavigationControls from "./UI/NavigationControls";
 import TileInfoPanel from "./UI/TileInfoPanel";
+import { DockController } from "./UI/DockController";
 
 // Define the ContinentalFalloffParams interface
 export interface ContinentalFalloffParams {
@@ -822,12 +823,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
         />
       )}
 
-      {/* Navigation controls
+      {/* Navigation controls */}
       <NavigationControls onPan={handlePan} onZoom={handleZoom} />
-      */}
 
       {/* Progress bar overlay */}
       {isGenerating && <ProgressBar progress={generationProgress} />}
+
+      {/* Dock UI */}
+      <DockController />
     </div>
   );
 };
