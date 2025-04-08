@@ -50,7 +50,12 @@ import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
 import { rgbToString } from "./terrainUtils";
 import ProgressBar from "./UI/ProgressBar";
 import NavigationControls from "./UI/NavigationControls";
-import TileInfoPanel from "./UI/TileInfoPanel";
+import { TileInfoPanel } from './UI/TileInfoPanel';
+import { WorldMapOverlay } from './UI/Overlays/WorldMapOverlay';
+import { TileWithOwnership } from '@/types/auction';
+import { AuctionTileOverlay } from './UI/Overlays/AuctionTileOverlay';
+import { useTileAuctionStatus } from '@/hooks/useTileAuctionStatus';
+import auctionService from '@/services/auctionService';
 
 // Define the ContinentalFalloffParams interface
 export interface ContinentalFalloffParams {
@@ -114,6 +119,8 @@ interface WorldMapProps {
   // Progress tracking
   isGenerating?: boolean;
   generationProgress?: number;
+  tiles?: Map<string, TileWithOwnership>;
+  showAuctionOverlay?: boolean;
 }
 
 interface CameraState {
@@ -167,6 +174,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
   // Progress tracking
   isGenerating = false,
   generationProgress = 0,
+  tiles = new Map(),
+  showAuctionOverlay = true,
 }) => {
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -221,6 +230,19 @@ const WorldMap: React.FC<WorldMapProps> = ({
     y: number;
     progress: number;
   }>({ active: false, x: 0, y: 0, progress: 0 });
+
+  // Add state for tracking auction data
+  const [allAuctions, setAllAuctions] = useState<any[]>([]);
+  const [loadingAuctions, setLoadingAuctions] = useState(false);
+
+  // Use our hook for the selected tile
+  const { 
+    auctions: selectedTileAuctions, 
+    auctionInfo: selectedTileAuctionInfo,
+    loading: loadingSelectedTileAuction 
+  } = useTileAuctionStatus(
+    selectedTileCoords ? `${selectedTileCoords.x}-${selectedTileCoords.y}` : null
+  );
 
   // Create world generator with specified parameters
   const worldGeneratorRef = useRef<WorldGenerator>(
@@ -1097,15 +1119,43 @@ const WorldMap: React.FC<WorldMapProps> = ({
     []
   );
 
-  // Handler for view auction action - placeholder for now
-  const handleViewAuction = useCallback(
-    (x: number, y: number) => {
-      console.log(`View auction for tile at (${x}, ${y}) - to be implemented in Phase 2`);
-      // This will be implemented in Phase 2 with backend integration
-      alert(`Auction view feature will be available in the next phase of development.`);
-    },
-    []
-  );
+  // Handle view auction functionality
+  const handleViewAuction = useCallback((x: number, y: number) => {
+    // Set the selected tile
+    setSelectedTileCoords({ x, y });
+    
+    // The useTileAuctionStatus hook will automatically fetch auction data
+    // and the TileInfoPanel can be updated to show an auction tab
+  }, []);
+
+  // Fetch all active auctions on component mount
+  useEffect(() => {
+    const fetchAuctions = async () => {
+      if (!showAuctionOverlay) return;
+      
+      setLoadingAuctions(true);
+      try {
+        const auctions = await auctionService.getActiveAuctions();
+        setAllAuctions(auctions);
+      } catch (error) {
+        console.error('Failed to fetch auctions:', error);
+      } finally {
+        setLoadingAuctions(false);
+      }
+    };
+
+    fetchAuctions();
+    
+    // Set up a subscription for all auctions if needed
+    if (showAuctionOverlay) {
+      const unsubscribe = auctionService.subscribeToAllAuctions((event) => {
+        // Refresh auctions when events occur
+        fetchAuctions();
+      });
+      
+      return unsubscribe;
+    }
+  }, [showAuctionOverlay]);
 
   // Clean up any animation frames on unmount
   useEffect(() => {
@@ -1123,47 +1173,58 @@ const WorldMap: React.FC<WorldMapProps> = ({
         ref={canvasRef}
         width={width}
         height={height}
-        onMouseMove={handleMouseMove}
-        onClick={handleCanvasClick}
-        onWheel={handleWheel}
+        className="absolute top-0 left-0"
+        style={{
+          width: width,
+          height: height,
+        }}
         onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        onWheel={handleWheel}
       />
-      {/*
-      {debug && (
-        <div className="absolute top-2 left-2 bg-black bg-opacity-50 p-2 rounded text-white text-xs">
-          <div>Seed: {seed}</div>
-          <div>Zoom: {camera.zoom.toFixed(2)}</div>
+
+      <WorldMapOverlay
+        tiles={tiles}
+        tileSize={tileSize}
+        viewportWidth={width}
+        viewportHeight={height}
+        offsetX={camera.x}
+        offsetY={camera.y}
+        zoom={camera.zoom}
+      />
+
+      {/* New AuctionTileOverlay - only shown if feature flag is enabled */}
+      {showAuctionOverlay && (
+        <AuctionTileOverlay
+          auctions={allAuctions}
+          tileSize={tileSize}
+          viewportWidth={width}
+          viewportHeight={height}
+          offsetX={camera.x}
+          offsetY={camera.y}
+          zoom={camera.zoom}
+          startX={getVisibleGridCells(camera, camera.zoom, camera.zoom < LOW_ZOOM_THRESHOLD).startX}
+          startY={getVisibleGridCells(camera, camera.zoom, camera.zoom < LOW_ZOOM_THRESHOLD).startY}
+          enabled={showAuctionOverlay && !loadingAuctions}
+        />
+      )}
+
+      {/* Show progress bar during generation */}
+      {isGenerating && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+          <ProgressBar progress={generationProgress} />
         </div>
       )}
-      */}
 
-      {/* Tile Info Panel - Selected Tile */}
-      {selectedTileInfo && selectedTileCoords && (
-        <TileInfoPanel
-          tileInfo={selectedTileInfo}
-          position="selected"
-          coordinates={selectedTileCoords}
-          onZoomToTile={handleZoomToTile}
-          onClaimTile={handleClaimTile}
-          onViewAuction={handleViewAuction}
-          // These would come from backend in the future
-          isOwned={false}
-          isForSale={false}
-        />
+      {/* Show debug info if enabled */}
+      {debug && (
+        <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white p-2 rounded">
+          <pre className="text-xs">{debugInfo}</pre>
+        </div>
       )}
 
-      {/* Tile Info Panel - Hover */}
-      {hoverTileInfo && hoverTileCoords && !isDragging && (
-        <TileInfoPanel
-          tileInfo={hoverTileInfo}
-          position="hover"
-          coordinates={hoverTileCoords}
-        />
-      )}
-
-      {/* Navigation Controls */}
+      {/* Navigation controls */}
       <NavigationControls
         onPan={handlePan}
         onZoom={handleZoom}
@@ -1173,8 +1234,27 @@ const WorldMap: React.FC<WorldMapProps> = ({
         hasSelection={selectedTiles.length > 0}
       />
 
-      {/* Progress bar overlay */}
-      {isGenerating && <ProgressBar progress={generationProgress} />}
+      {/* Tile info panel */}
+      {selectedTileCoords && (
+        <TileInfoPanel
+          tile={{
+            tileId: `${selectedTileCoords.x}-${selectedTileCoords.y}`,
+            coordinates: selectedTileCoords,
+            biome: String(worldGeneratorRef.current.getBiome(selectedTileCoords.x, selectedTileCoords.y)) || 'Unknown',
+            elevation: worldGeneratorRef.current.getElevation(selectedTileCoords.x, selectedTileCoords.y) || 0,
+            temperature: worldGeneratorRef.current.getTemperature(selectedTileCoords.x, selectedTileCoords.y, 0) || 0,
+            moisture: worldGeneratorRef.current.getMoisture(selectedTileCoords.x, selectedTileCoords.y) || 0,
+            resources: [],
+            ownership: tiles.get(`${selectedTileCoords.x}-${selectedTileCoords.y}`)?.ownership || {
+              ownerId: '',
+              ownerName: '',
+              inAuction: false
+            }
+          }}
+          onClose={() => setSelectedTileCoords(null)}
+          initialTab={selectedTileAuctionInfo ? 1 : 0}
+        />
+      )}
     </div>
   );
 };

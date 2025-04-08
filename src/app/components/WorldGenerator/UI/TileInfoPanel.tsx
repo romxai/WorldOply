@@ -4,165 +4,139 @@
  * Component for displaying detailed information about a selected or hovered tile.
  */
 
-import React, { useState } from "react";
-import { BiomeType } from "../config";
+import React, { useState, useEffect, useRef } from 'react';
+import { Tab } from '@headlessui/react';
+import { TileWithOwnership } from '@/types/auction';
+import { AuctionInfo } from './AuctionInfo';
+import { useTileAuctionStatus } from '@/hooks/useTileAuctionStatus';
+import { useAuctionService } from '@/hooks/useAuctionService';
+import { cn } from '@/utils/cn';
+import { type AuctionBidInfo } from '@/types/auction';
 
 interface TileInfoPanelProps {
-  tileInfo: string | null;
-  position: "hover" | "selected";
-  coordinates?: { x: number; y: number };
-  onZoomToTile?: (x: number, y: number) => void;
-  // New properties for actions
-  onClaimTile?: (x: number, y: number) => void;
-  onViewAuction?: (x: number, y: number) => void;
-  isOwned?: boolean;
-  isForSale?: boolean;
-  owner?: string;
+  tile: TileWithOwnership;
+  onClose: () => void;
+  initialTab?: number;
 }
 
-const TileInfoPanel: React.FC<TileInfoPanelProps> = ({
-  tileInfo,
-  position,
-  coordinates,
-  onZoomToTile,
-  onClaimTile,
-  onViewAuction,
-  isOwned = false,
-  isForSale = false,
-  owner,
+export const TileInfoPanel: React.FC<TileInfoPanelProps> = ({ 
+  tile, 
+  onClose,
+  initialTab = 0
 }) => {
-  // Add state for info tabs
-  const [activeTab, setActiveTab] = useState<'info' | 'resources' | 'actions'>('info');
+  const [selectedTab, setSelectedTab] = useState(initialTab);
+  const { placeBid } = useAuctionService();
+  
+  // Use our new hook instead of manually fetching auction info
+  const { 
+    auctions: tileAuctions, 
+    auctionInfo, 
+    loading: isLoadingAuction 
+  } = useTileAuctionStatus(tile.tileId);
 
-  if (!tileInfo) return null;
+  useEffect(() => {
+    // If there's an active auction and initialTab is for auction tab, switch to it
+    if (initialTab === 1 || (tile.ownership?.inAuction && auctionInfo)) {
+      setSelectedTab(1);
+    }
+  }, [tile.tileId, tile.ownership?.inAuction, auctionInfo, initialTab]);
 
-  // For hover info, show a compact panel
-  if (position === "hover") {
-    return (
-      <div className="absolute top-4 left-4 bg-gray-800 bg-opacity-90 p-3 rounded shadow-lg border border-gray-600 text-white text-sm max-w-xs z-10">
-        <div className="font-semibold mb-1 text-blue-300 border-b border-gray-600 pb-1">
-          Hover Position: X: {coordinates?.x}, Y: {coordinates?.y}
-        </div>
-        <pre className="text-xs whitespace-pre-wrap">
-          {
-            // Format the tileInfo to be more readable - just show the first few lines
-            tileInfo.split("\n").slice(0, 6).join("\n")
-          }
-        </pre>
-        <div className="text-xs text-gray-400 mt-1 italic">
-          Click to select this tile for details
-        </div>
-      </div>
-    );
-  }
+  const handleBidPlaced = () => {
+    // We don't need to do anything here as the hook will refresh automatically
+  };
 
-  // Parse tileInfo to extract relevant data
-  const biomeMatch = tileInfo.match(/Biome: (.*)/);
-  const biomeName = biomeMatch ? biomeMatch[1] : "Unknown";
-  
-  const elevationMatch = tileInfo.match(/Elevation: (.*)/);
-  const elevation = elevationMatch ? elevationMatch[1] : "0";
-  
-  const moistureMatch = tileInfo.match(/Moisture: (.*)/);
-  const moisture = moistureMatch ? moistureMatch[1] : "0";
-  
-  const temperatureMatch = tileInfo.match(/Temperature: (.*)/);
-  const temperature = temperatureMatch ? temperatureMatch[1] : "0";
-  
-  // For selected info, show a more detailed panel with tabs
   return (
-    <div className="absolute bottom-20 left-4 bg-gray-800 bg-opacity-90 p-3 rounded shadow-lg border border-gray-600 text-white text-sm max-w-xs z-10">
-      <div className="font-semibold mb-1 text-green-300 border-b border-gray-600 pb-1">
-        Selected Tile: X: {coordinates?.x}, Y: {coordinates?.y}
-        {isOwned && <span className="ml-2 text-amber-300">• Owned by {owner}</span>}
-        {isForSale && <span className="ml-2 text-amber-300">• For Sale</span>}
-      </div>
-      
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-600 mb-2">
+    <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-lg p-4 overflow-y-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Tile Information</h2>
         <button
-          className={`py-1 px-2 text-xs ${activeTab === 'info' ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('info')}
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700"
         >
-          Info
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${activeTab === 'resources' ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('resources')}
-        >
-          Resources
-        </button>
-        <button
-          className={`py-1 px-2 text-xs ${activeTab === 'actions' ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
-          onClick={() => setActiveTab('actions')}
-        >
-          Actions
+          ×
         </button>
       </div>
-      
-      {/* Tab Content */}
-      <div className="text-xs whitespace-pre-wrap overflow-y-auto max-h-60">
-        {activeTab === 'info' && (
-          <div>
-            <div className="grid grid-cols-2 gap-1 mb-2">
-              <div className="font-semibold">Biome:</div>
-              <div>{biomeName}</div>
-              <div className="font-semibold">Elevation:</div>
-              <div>{elevation}</div>
-              <div className="font-semibold">Moisture:</div>
-              <div>{moisture}</div>
-              <div className="font-semibold">Temperature:</div>
-              <div>{temperature}</div>
+
+      <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
+        <Tab.List className="flex space-x-1 rounded-xl bg-blue-900/20 p-1">
+          <Tab
+            className={({ selected }: { selected: boolean }) =>
+              cn(
+                'w-full rounded-lg py-2.5 text-sm font-medium leading-5',
+                'ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2',
+                selected
+                  ? 'bg-white shadow text-blue-700'
+                  : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
+              )
+            }
+          >
+            Details
+          </Tab>
+          <Tab
+            className={({ selected }: { selected: boolean }) =>
+              cn(
+                'w-full rounded-lg py-2.5 text-sm font-medium leading-5',
+                'ring-white ring-opacity-60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2',
+                selected
+                  ? 'bg-white shadow text-blue-700'
+                  : 'text-blue-100 hover:bg-white/[0.12] hover:text-white',
+                // Show indicator for active auctions
+                tile.ownership?.inAuction ? 'relative' : ''
+              )
+            }
+          >
+            Auction
+            {tile.ownership?.inAuction && (
+              <span className="absolute top-1 right-2 w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+            )}
+          </Tab>
+        </Tab.List>
+        <Tab.Panels className="mt-2">
+          <Tab.Panel>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Location</h3>
+                <p>X: {tile.coordinates.x}, Y: {tile.coordinates.y}</p>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Terrain</h3>
+                <p>Biome: {tile.biome}</p>
+                <p>Elevation: {tile.elevation.toFixed(2)}</p>
+                <p>Temperature: {tile.temperature.toFixed(2)}°C</p>
+                <p>Moisture: {tile.moisture.toFixed(2)}%</p>
+              </div>
+              {tile.resources.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold">Resources</h3>
+                  <ul>
+                    {tile.resources.map((resource, index) => (
+                      <li key={index}>
+                        {resource.type}: {resource.amount}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-            <pre className="mt-2 border-t border-gray-600 pt-2 text-gray-300">
-              {tileInfo}
-            </pre>
-          </div>
-        )}
-        
-        {activeTab === 'resources' && (
-          <div>
-            <p className="mb-2 italic text-gray-400">Resource information will be available in future updates.</p>
-            <div className="p-2 bg-gray-700 rounded">
-              <div className="font-semibold mb-1">Potential Resources:</div>
-              <p>Resources will be determined by biome type and tile properties. {biomeName} biomes typically contain specific resources based on elevation and other factors.</p>
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'actions' && (
-          <div className="flex flex-col gap-2">
-            {onZoomToTile && coordinates && (
-              <button
-                className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-xs flex items-center justify-center"
-                onClick={() => onZoomToTile(coordinates.x, coordinates.y)}
-              >
-                🔍 Zoom to Tile
-              </button>
+          </Tab.Panel>
+          <Tab.Panel>
+            {isLoadingAuction ? (
+              <div className="p-4 text-center">
+                <p>Loading auction information...</p>
+              </div>
+            ) : (
+              tile.ownership && (
+                <AuctionInfo
+                  tileId={tile.tileId}
+                  ownership={tile.ownership}
+                  auctionInfo={auctionInfo || undefined}
+                  onBidPlaced={handleBidPlaced}
+                />
+              )
             )}
-            
-            {onClaimTile && coordinates && !isOwned && (
-              <button
-                className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded text-xs flex items-center justify-center"
-                onClick={() => onClaimTile(coordinates.x, coordinates.y)}
-              >
-                🚩 Claim Tile
-              </button>
-            )}
-            
-            {onViewAuction && coordinates && (
-              <button
-                className="bg-amber-600 hover:bg-amber-700 text-white py-1 px-3 rounded text-xs flex items-center justify-center"
-                onClick={() => onViewAuction(coordinates.x, coordinates.y)}
-              >
-                🏷️ {isForSale ? 'View Auction' : 'Check Availability'}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+          </Tab.Panel>
+        </Tab.Panels>
+      </Tab.Group>
     </div>
   );
 };
-
-export default TileInfoPanel;

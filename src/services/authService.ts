@@ -205,32 +205,39 @@ class AuthService {
   }
   
   private setAuth(user: User, token: string, refreshToken: string) {
+    // Store user and tokens
     this.currentUser = user;
-    
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
       localStorage.setItem('refreshToken', refreshToken);
     }
     
-    // Initialize realtime
-    realtimeService.initialize(token);
+    // Initialize realtime connection with the token
+    realtimeService.initialize(token)
+      .then(() => console.log('Realtime service initialized successfully'))
+      .catch(error => console.error('Failed to initialize realtime service:', error));
     
+    // Notify listeners
     this.notifyListeners();
   }
   
   private clearAuth() {
+    // Clear user and tokens
     this.currentUser = null;
-    
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
     }
     
-    // Disconnect realtime
+    // Disconnect realtime service
     realtimeService.disconnect();
     
+    // Update API service
+    apiService.clearToken();
+    
+    // Notify listeners
     this.notifyListeners();
   }
   

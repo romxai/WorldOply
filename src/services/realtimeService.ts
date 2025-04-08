@@ -3,30 +3,26 @@
  * Handles event subscriptions and real-time updates
  */
 import { default as socketio } from 'socket.io-client';
+import { 
+  EventType,
+  EventTopic,
+  getAuctionTopic,
+  getGlobalAuctionTopic,
+  AuctionBidPlacedEvent,
+  AuctionCreatedEvent,
+  AuctionEndedEvent
+} from '../types/realtime';
 
-// Topics for event subscriptions
-export enum EventTopic {
-  GLOBAL = 'global',
-  AUCTION = 'AUCTION',
-  LAND_SQUARE = 'LAND_SQUARE',
-  PLAYER = 'PLAYER',
-  MARKETPLACE = 'MARKETPLACE'
+/**
+ * Interface for event handlers
+ */
+interface EventHandler {
+  (data: any): void;
 }
 
-// Event types for realtime communication
-export enum EventType {
-  AUCTION_STARTED = 'AUCTION_STARTED',
-  AUCTION_ENDED = 'AUCTION_ENDED',
-  AUCTION_BID_PLACED = 'AUCTION_BID_PLACED',
-  RESOURCES_UPDATED = 'RESOURCES_UPDATED',
-  PLAYER_NOTIFICATION = 'PLAYER_NOTIFICATION',
-  LAND_UPDATED = 'LAND_UPDATED',
-  SYSTEM_ANNOUNCEMENT = 'SYSTEM_MESSAGE',
-  TEST_EVENT = 'TEST_EVENT'
-}
-
-export type EventHandler = (data: any) => void;
-
+/**
+ * Interface for subscriptions
+ */
 interface Subscription {
   topic: string;
   eventType: EventType;
@@ -37,8 +33,10 @@ class RealtimeService {
   private socket: any = null;
   private subscriptions: Subscription[] = [];
   private _isConnected = false;
+  private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
+  private maxReconnectAttempts = 10;
+  private reconnectDelay = 1000;
   private playerCountUpdateCallback: ((count: number) => void) | null = null;
   private token: string | undefined;
 
@@ -71,29 +69,20 @@ class RealtimeService {
       // Create Socket.IO connection with auth token
       this.socket = socketio(process.env.NEXT_PUBLIC_WEBSOCKET_URL, {
         auth: token ? { token } : {},
-        transports: ['websocket']
+        transports: ['websocket'],
+        forceNew: true,
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+        autoConnect: true
       });
       
       console.log('Socket.IO instance created, registering event handlers');
 
       // Set up event handlers
-      this.socket.on('connect', this.handleConnect.bind(this));
-      this.socket.on('disconnect', this.handleDisconnect.bind(this));
-      this.socket.on('connect_error', this.handleError.bind(this));
-      this.socket.on('subscribed', this.handleSubscribed.bind(this));
-      this.socket.on('unsubscribed', this.handleUnsubscribed.bind(this));
-      
-      // Set up handlers for all event types
-      Object.values(EventType).forEach(eventType => {
-        this.socket?.on(eventType, (data: any) => {
-          // Find subscriptions matching this event type
-          this.subscriptions.forEach(sub => {
-            if (sub.eventType === eventType) {
-              sub.handler(data);
-            }
-          });
-        });
-      });
+      this.setupEventHandlers();
       
       // Return promise that resolves when connected
       return new Promise((resolve, reject) => {
@@ -126,25 +115,118 @@ class RealtimeService {
   }
 
   /**
+   * Socket.IO event handlers
+   */
+  private setupEventHandlers(): void {
+    if (!this.socket) return;
+    
+    console.log('Setting up Socket.IO event handlers');
+    
+    // Set up event handlers for Socket.IO connection events
+    this.socket.on('connect', this.handleConnect.bind(this));
+    this.socket.on('disconnect', this.handleDisconnect.bind(this));
+    this.socket.on('connect_error', this.handleError.bind(this));
+    this.socket.on('subscribed', this.handleSubscribed.bind(this));
+    this.socket.on('unsubscribed', this.handleUnsubscribed.bind(this));
+    
+    // Debug all incoming events
+    this.socket.onAny((eventName: string, ...args: any[]) => {
+      console.log(`Received event: ${eventName}`, args);
+    });
+    
+    // Set up handlers for all event types (using the string values to match server format)
+    Object.values(EventType).forEach(eventType => {
+      console.log(`Setting up handler for event type: ${eventType}`);
+      this.socket?.on(eventType, (data: any) => {
+        console.log(`Received event of type ${eventType}:`, data);
+        
+        // Find subscriptions matching this event type
+        this.subscriptions.forEach(sub => {
+          if (sub.eventType === eventType) {
+            console.log(`Found matching subscription for ${eventType} on topic ${sub.topic}`);
+            try {
+              sub.handler(data.data || data);
+            } catch (error) {
+              console.error(`Error in event handler for ${eventType}:`, error);
+            }
+          }
+        });
+      });
+    });
+  }
+
+  /**
    * Handle Socket.IO connect event
    */
   private handleConnect(): void {
+    console.log('Socket.IO connected successfully');
     this._isConnected = true;
     this.reconnectAttempts = 0;
-    console.log('Socket.IO connected');
+    
+    // After connecting, dump subscription info
+    console.log(`Current subscriptions (${this.subscriptions.length}):`, 
+      this.subscriptions.map(s => `${s.topic}:${s.eventType}`));
     
     // Resubscribe to all topics
     this.resubscribeAll();
   }
 
   /**
-   * Handle Socket.IO disconnect event
+   * Handle Socket.IO disconnect event with exponential backoff
    */
   private handleDisconnect(reason: string): void {
     this._isConnected = false;
     console.log(`Socket.IO disconnected: ${reason}`);
     
-    // No need to handle reconnection as Socket.IO handles it automatically
+    // Only attempt reconnect if not an intentional disconnect
+    if (reason !== 'io client disconnect') {
+      this.attemptReconnect();
+    }
+  }
+
+  private attemptReconnect(): void {
+    // Clear any existing reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    
+    // Check if we've hit the maximum reconnect attempts
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('Maximum reconnection attempts reached');
+      return;
+    }
+    
+    // Increment reconnect attempts
+    this.reconnectAttempts++;
+    
+    // Use exponential backoff for reconnect delay
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts), 
+      30000 // Max 30 seconds
+    );
+    
+    console.log(`Attempting reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    
+    // Set a timer to reconnect
+    this.reconnectTimer = setTimeout(() => {
+      console.log('Attempting to reconnect...');
+      
+      // Get the token again (it might have changed)
+      const token = localStorage.getItem('token') || undefined;
+      
+      // Initialize with token
+      this.initialize(token)
+        .then(() => {
+          console.log('Reconnected successfully');
+          this.reconnectAttempts = 0;
+          this.reconnectTimer = null;
+        })
+        .catch(error => {
+          console.error('Failed to reconnect:', error);
+          // Will try again on next cycle
+        });
+    }, delay);
   }
 
   /**
@@ -219,6 +301,8 @@ class RealtimeService {
   public subscribe(topic: EventTopic, id: string | undefined, eventType: EventType, handler: EventHandler): void {
     const formattedTopic = id ? `${topic}:${id}` : topic;
     
+    console.log(`Subscribing to ${eventType} events on topic ${formattedTopic}`);
+    
     // Store subscription for reconnect
     this.subscriptions.push({
       topic: formattedTopic,
@@ -228,7 +312,10 @@ class RealtimeService {
     
     // If connected, send subscription message
     if (this._isConnected && this.socket) {
+      console.log(`Sending subscription request for topic ${formattedTopic}`);
       this.socket.emit('subscribe', { topic: formattedTopic });
+    } else {
+      console.log(`Not connected, subscription for ${formattedTopic} will be sent on reconnect`);
     }
   }
 
@@ -289,6 +376,27 @@ class RealtimeService {
    */
   public isConnected(): boolean {
     return this._isConnected;
+  }
+
+  /**
+   * Subscribe to a specific auction's updates via WebSocket
+   */
+  public subscribeToAuction(auctionId: string, callback: (data: any) => void): void {
+    // Get the formatted topic for this auction
+    const topic = getAuctionTopic(auctionId);
+    
+    // Create a shared handler that filters events for this auction
+    const handleEvent = (data: any) => {
+      // Only process events for this specific auction
+      if (data.auctionId === auctionId) {
+        callback(data);
+      }
+    };
+    
+    // Subscribe to all relevant auction events
+    this.subscribe(EventTopic.AUCTION, auctionId, EventType.AUCTION_BID_PLACED, handleEvent);
+    this.subscribe(EventTopic.AUCTION, auctionId, EventType.AUCTION_STARTED, handleEvent);
+    this.subscribe(EventTopic.AUCTION, auctionId, EventType.AUCTION_ENDED, handleEvent);
   }
 }
 

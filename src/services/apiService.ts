@@ -109,6 +109,14 @@ class ApiService {
     this.refreshTokenCallback = callback;
   }
 
+  /**
+   * Clear the auth token and reset refresh callback
+   */
+  public clearToken(): void {
+    this.refreshTokenCallback = null;
+    this.refreshTokenPromise = null;
+  }
+
   private handleError(error: AxiosError): ApiError {
     let errorResponse: ApiError = {
       message: 'An unexpected error occurred'
