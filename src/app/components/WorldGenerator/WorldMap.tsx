@@ -171,6 +171,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Add animation reference for handling animation frames
+  const animationRequestRef = useRef<number | null>(null);
 
   // Camera state for position and zoom
   const [camera, setCamera] = useState<CameraState>({
@@ -208,6 +210,17 @@ const WorldMap: React.FC<WorldMapProps> = ({
     x: number;
     y: number;
   } | null>(null);
+  // Add new state for multiple selected tiles
+  const [selectedTiles, setSelectedTiles] = useState<
+    Array<{ x: number; y: number; info: string }>
+  >([]);
+  // Add state for highlighting animation
+  const [selectionHighlight, setSelectionHighlight] = useState<{
+    active: boolean;
+    x: number;
+    y: number;
+    progress: number;
+  }>({ active: false, x: 0, y: 0, progress: 0 });
 
   // Create world generator with specified parameters
   const worldGeneratorRef = useRef<WorldGenerator>(
@@ -269,6 +282,92 @@ const WorldMap: React.FC<WorldMapProps> = ({
     },
     [camera.zoom, width, height, tileSize]
   );
+
+  // New method to zoom to specific coordinates using a sectional approach
+  const handleZoomToCoordinates = useCallback(
+    (x: number, y: number, targetZoom?: number) => {
+      // Target zoom level - use provided or default to a reasonable zoom
+      const finalZoom = targetZoom || Math.min(2.0, MAX_ZOOM);
+      
+      // Calculate visible tiles at target zoom for boundary checking
+      const newVisibleTilesX = width / (tileSize * finalZoom);
+      const newVisibleTilesY = height / (tileSize * finalZoom);
+      
+      // Apply camera boundaries to ensure we don't go beyond map edges
+      const minX = newVisibleTilesX / 2;
+      const maxX = WORLD_GRID_WIDTH - newVisibleTilesX / 2;
+      const minY = newVisibleTilesY / 2;
+      const maxY = WORLD_GRID_HEIGHT - newVisibleTilesY / 2;
+      
+      // Clamp x and y to ensure the camera stays within map bounds
+      const boundedX = Math.max(minX, Math.min(maxX, x));
+      const boundedY = Math.max(minY, Math.min(maxY, y));
+      
+      // Directly set new camera position centered on the target tile
+      const newCamera = {
+        x: boundedX,
+        y: boundedY,
+        zoom: finalZoom,
+      };
+      
+      // Clean up any existing animation
+      if (animationRequestRef.current) {
+        cancelAnimationFrame(animationRequestRef.current);
+        animationRequestRef.current = null;
+      }
+      
+      // Animation setup
+      const startCamera = { ...camera };
+      const endCamera = newCamera;
+      
+      // Animation duration and frame counting
+      const duration = 30;
+      let frame = 0;
+      
+      const animateZoom = () => {
+        frame++;
+        const progress = Math.min(frame / duration, 1);
+        
+        // Use easeInOutCubic easing function for smooth animation
+        const easeProgress = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        
+        // Interpolate camera values
+        const newCamera = {
+          x: startCamera.x + (endCamera.x - startCamera.x) * easeProgress,
+          y: startCamera.y + (endCamera.y - startCamera.y) * easeProgress,
+          zoom: startCamera.zoom + (endCamera.zoom - startCamera.zoom) * easeProgress,
+        };
+        
+        setCamera(newCamera);
+        setMapChanged(true);
+        
+        if (frame < duration) {
+          animationRequestRef.current = requestAnimationFrame(animateZoom);
+        } else {
+          animationRequestRef.current = null;
+        }
+      };
+      
+      // Start animation
+      animationRequestRef.current = requestAnimationFrame(animateZoom);
+    },
+    [camera, width, height, tileSize]
+  );
+
+  // Handle reset zoom to show the entire map
+  const handleResetZoom = useCallback(() => {
+    // Use the initial zoom level from config instead of calculating minimum zoom
+    const resetZoom = INITIAL_ZOOM;
+    
+    // Center the camera on the map
+    const centerX = WORLD_GRID_WIDTH / 2;
+    const centerY = WORLD_GRID_HEIGHT / 2;
+    
+    // Use the zoom to coordinates function with the initial zoom value
+    handleZoomToCoordinates(centerX, centerY, resetZoom);
+  }, [handleZoomToCoordinates]);
 
   // Handle pan action from navigation buttons - defined BEFORE the keyboard useEffect
   const handlePan = useCallback(
@@ -468,6 +567,368 @@ const WorldMap: React.FC<WorldMapProps> = ({
     [calculateTileSize, width, height]
   );
 
+  // Get world coordinates from screen coordinates
+  const screenToWorldCoords = useCallback(
+    (screenX: number, screenY: number) => {
+      if (!canvasRef.current) return null;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const canvasX = screenX - rect.left;
+      const canvasY = screenY - rect.top;
+
+      // Calculate actual tile size with zoom
+      const currentTileSize = calculateTileSize(camera.zoom);
+
+      // Get visible grid cells to determine start coordinates
+      const isLowZoom = camera.zoom < LOW_ZOOM_THRESHOLD;
+      const { startX, startY } = getVisibleGridCells(
+        camera,
+        camera.zoom,
+        isLowZoom
+      );
+
+      // Calculate camera offset in pixels
+      const offsetX = (camera.x - startX) * currentTileSize;
+      const offsetY = (camera.y - startY) * currentTileSize;
+
+      // Convert screen coordinates to world coordinates
+      const mouseWorldX =
+        startX + (canvasX - width / 2 + offsetX) / currentTileSize;
+      const mouseWorldY =
+        startY + (canvasY - height / 2 + offsetY) / currentTileSize;
+
+      // Round to get the tile coordinates
+      const tileX = Math.floor(mouseWorldX);
+      const tileY = Math.floor(mouseWorldY);
+
+      // Check if mouse is over a valid tile
+      if (
+        tileX < 0 ||
+        tileX >= WORLD_GRID_WIDTH ||
+        tileY < 0 ||
+        tileY >= WORLD_GRID_HEIGHT
+      ) {
+        return null;
+      }
+
+      return { x: tileX, y: tileY };
+    },
+    [camera, tileSize, width, height, calculateTileSize, getVisibleGridCells]
+  );
+
+  // Add a function to draw selected tiles highlight with improved coordinate transformation
+  const drawSelectedTiles = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      if (selectedTiles.length === 0) return;
+
+      // Calculate which grid cells are visible
+      const isLowZoom = camera.zoom < LOW_ZOOM_THRESHOLD;
+      const { startX, startY } = getVisibleGridCells(
+        camera,
+        camera.zoom,
+        isLowZoom
+      );
+
+      // Calculate actual tile size with zoom
+      const currentTileSize = calculateTileSize(camera.zoom);
+
+      // Calculate camera offset in pixels
+      const offsetX = (camera.x - startX) * currentTileSize;
+      const offsetY = (camera.y - startY) * currentTileSize;
+
+      selectedTiles.forEach((tile) => {
+        // Calculate screen position for this tile - using the same transformation as for rendering tiles
+        const screenX = (tile.x - startX) * currentTileSize - offsetX + width / 2;
+        const screenY = (tile.y - startY) * currentTileSize - offsetY + height / 2;
+        const size = currentTileSize;
+
+        // Draw selection border
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(screenX, screenY, size, size);
+
+        // Draw corner indicators
+        const cornerSize = size / 5;
+        ctx.strokeStyle = "rgba(50, 205, 50, 0.9)";
+        ctx.lineWidth = 3;
+        
+        // Top-left corner
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY + cornerSize);
+        ctx.lineTo(screenX, screenY);
+        ctx.lineTo(screenX + cornerSize, screenY);
+        ctx.stroke();
+        
+        // Top-right corner
+        ctx.beginPath();
+        ctx.moveTo(screenX + size - cornerSize, screenY);
+        ctx.lineTo(screenX + size, screenY);
+        ctx.lineTo(screenX + size, screenY + cornerSize);
+        ctx.stroke();
+        
+        // Bottom-right corner
+        ctx.beginPath();
+        ctx.moveTo(screenX + size, screenY + size - cornerSize);
+        ctx.lineTo(screenX + size, screenY + size);
+        ctx.lineTo(screenX + size - cornerSize, screenY + size);
+        ctx.stroke();
+        
+        // Bottom-left corner
+        ctx.beginPath();
+        ctx.moveTo(screenX + cornerSize, screenY + size);
+        ctx.lineTo(screenX, screenY + size);
+        ctx.lineTo(screenX, screenY + size - cornerSize);
+        ctx.stroke();
+      });
+
+      // Draw highlight animation if active
+      if (selectionHighlight.active) {
+        const { x, y, progress } = selectionHighlight;
+        
+        // Calculate screen position using the same transformation
+        const screenX = (x - startX) * currentTileSize - offsetX + width / 2;
+        const screenY = (y - startY) * currentTileSize - offsetY + height / 2;
+        const size = currentTileSize;
+        
+        // Calculate animation values
+        const animSize = size * (1 + progress * 0.2);
+        const animOffset = (animSize - size) / 2;
+        
+        ctx.strokeStyle = `rgba(255, 215, 0, ${0.8 - progress * 0.8})`;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(
+          screenX - animOffset,
+          screenY - animOffset,
+          animSize,
+          animSize
+        );
+        
+        // Update animation progress using requestAnimationFrame
+        // to avoid setState during render cycle
+        if (progress < 1) {
+          if (!animationRequestRef.current) {
+            animationRequestRef.current = requestAnimationFrame(() => {
+              setSelectionHighlight({
+                ...selectionHighlight,
+                progress: progress + 0.05,
+              });
+              setMapChanged(true);
+              animationRequestRef.current = null;
+            });
+          }
+        } else {
+          if (!animationRequestRef.current) {
+            animationRequestRef.current = requestAnimationFrame(() => {
+              setSelectionHighlight({
+                ...selectionHighlight,
+                active: false,
+                progress: 0,
+              });
+              animationRequestRef.current = null;
+            });
+          }
+        }
+      }
+    },
+    [
+      camera, 
+      tileSize, 
+      selectedTiles, 
+      selectionHighlight, 
+      calculateTileSize, 
+      getVisibleGridCells,
+      width,
+      height
+    ]
+  );
+  
+  // Handle mouse drag for panning
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only start dragging on left mouse button (button 0)
+    if (e.button === 0) {
+      setIsDragging(true);
+      setDragStartPos({ x: e.clientX, y: e.clientY });
+    }
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      // Update hover info
+      const coords = screenToWorldCoords(e.clientX, e.clientY);
+      if (!coords) {
+        setHoverTileInfo(null);
+        setHoverTileCoords(null);
+        return;
+      }
+
+      const { x, y } = coords;
+      setHoverTileCoords({ x, y });
+
+      // Get detailed info for this tile
+      const tileInfo = worldGeneratorRef.current.getDebugInfo(x, y);
+      setHoverTileInfo(tileInfo);
+
+      // Handle dragging
+      if (isDragging) {
+        const dx = e.clientX - dragStartPos.x;
+        const dy = e.clientY - dragStartPos.y;
+
+        // Calculate the new camera position - move in the opposite direction of drag
+        const newX = camera.x - dx / (tileSize * camera.zoom);
+        const newY = camera.y - dy / (tileSize * camera.zoom);
+
+        // Calculate how many tiles are visible at current zoom level
+        const currentTileSize = tileSize * camera.zoom;
+        const visibleTilesX = width / currentTileSize;
+        const visibleTilesY = height / currentTileSize;
+
+        // Calculate boundaries to ensure map stays visible
+        const minX = visibleTilesX / 2;
+        const maxX = WORLD_GRID_WIDTH - visibleTilesX / 2;
+        const minY = visibleTilesY / 2;
+        const maxY = WORLD_GRID_HEIGHT - visibleTilesY / 2;
+
+        // Clamp camera position to keep map in view
+        const clampedX = Math.max(minX, Math.min(maxX, newX));
+        const clampedY = Math.max(minY, Math.min(maxY, newY));
+
+        setCamera((prevCamera) => ({
+          ...prevCamera,
+          x: clampedX,
+          y: clampedY,
+        }));
+        setDragStartPos({ x: e.clientX, y: e.clientY }); // Update drag start position
+        setMapChanged(true);
+      }
+    },
+    [
+      isDragging,
+      dragStartPos,
+      camera.x,
+      camera.y,
+      camera.zoom,
+      tileSize,
+      width,
+      height,
+      screenToWorldCoords,
+    ]
+  );
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    if (e.button === 0) {
+      // Only handle left mouse button
+      setIsDragging(false);
+    }
+  }, []);
+
+  // Global mouse up handler to release drag even if mouse up occurs outside canvas
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    // Add the event listener to the window
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, []);
+
+  // Handle mouse click to select a tile
+  const handleCanvasClick = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!canvasRef.current) return;
+
+      // Skip tile selection if we've been dragging
+      if (isDragging) {
+        return;
+      }
+
+      // Use the same screenToWorldCoords function that the hover functionality uses
+      const coords = screenToWorldCoords(e.clientX, e.clientY);
+      if (!coords) {
+        return;
+      }
+
+      const { x, y } = coords;
+      
+      // Get the tile info - using the correct WorldGenerator methods
+      const biome = worldGeneratorRef.current.getBiome(x, y);
+      const elevation = worldGeneratorRef.current.getElevation(x, y);
+      const moisture = worldGeneratorRef.current.getMoisture(x, y);
+      const temperature = worldGeneratorRef.current.getTemperature(x, y, elevation);
+
+      // Format the tile info as a string
+      const tileInfo = 
+        `Biome: ${BIOME_NAMES[biome as keyof typeof BIOME_NAMES] || biome}\n` +
+        `Coordinates: (${x}, ${y})\n` +
+        `Elevation: ${elevation.toFixed(3)}\n` +
+        `Moisture: ${moisture.toFixed(3)}\n` +
+        `Temperature: ${temperature.toFixed(3)}`;
+
+      // Add the tile to selected tiles if not already selected, or remove if clicked again
+      const tileIndex = selectedTiles.findIndex(
+        (tile) => tile.x === x && tile.y === y
+      );
+
+      let newSelectedTiles = [...selectedTiles];
+      
+      if (tileIndex === -1) {
+        // If holding shift, add to selection without removing others
+        if (e.shiftKey) {
+          newSelectedTiles.push({
+            x,
+            y,
+            info: tileInfo,
+          });
+        } else {
+          // Replace selection with just this tile
+          newSelectedTiles = [{
+            x,
+            y,
+            info: tileInfo,
+          }];
+        }
+      } else if (e.shiftKey) {
+        // If holding shift and clicking on already selected tile, remove it
+        newSelectedTiles.splice(tileIndex, 1);
+      } else {
+        // If clicking on already selected tile without shift, make it the only selection
+        newSelectedTiles = [{
+          x,
+          y,
+          info: tileInfo,
+        }];
+      }
+
+      setSelectedTiles(newSelectedTiles);
+      
+      // Update primary selected tile info (the last selected one)
+      if (newSelectedTiles.length > 0) {
+        const lastSelected = newSelectedTiles[newSelectedTiles.length - 1];
+        setSelectedTileCoords({ x: lastSelected.x, y: lastSelected.y });
+        setSelectedTileInfo(lastSelected.info);
+
+        // Trigger the selection highlight animation
+        setSelectionHighlight({
+          active: true,
+          x: lastSelected.x,
+          y: lastSelected.y,
+          progress: 0,
+        });
+      } else {
+        setSelectedTileCoords(null);
+        setSelectedTileInfo(null);
+      }
+
+      // Force a redraw to show the selection
+      setMapChanged(true);
+    },
+    [camera, tileSize, selectedTiles, isDragging, screenToWorldCoords]
+  );
+
   // Main rendering loop - updates the canvas when needed
   useEffect(() => {
     // Skip rendering if nothing changed
@@ -573,6 +1034,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
     ctx.clearRect(0, 0, width, height);
     ctx.drawImage(offscreenCanvas, 0, 0);
 
+    // After rendering everything else, draw the selected tiles
+    drawSelectedTiles(ctx);
+
     // Rendering complete, reset the change flag
     setMapChanged(false);
   }, [
@@ -583,173 +1047,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
     camera,
     debug,
     currentVisualizationMode,
+    drawSelectedTiles,
   ]);
-
-  // Get world coordinates from screen coordinates
-  const screenToWorldCoords = useCallback(
-    (screenX: number, screenY: number) => {
-      if (!canvasRef.current) return null;
-
-      const rect = canvasRef.current.getBoundingClientRect();
-      const canvasX = screenX - rect.left;
-      const canvasY = screenY - rect.top;
-
-      // Calculate actual tile size with zoom
-      const currentTileSize = calculateTileSize(camera.zoom);
-
-      // Get visible grid cells to determine start coordinates
-      const isLowZoom = camera.zoom < LOW_ZOOM_THRESHOLD;
-      const { startX, startY } = getVisibleGridCells(
-        camera,
-        camera.zoom,
-        isLowZoom
-      );
-
-      // Calculate camera offset in pixels
-      const offsetX = (camera.x - startX) * currentTileSize;
-      const offsetY = (camera.y - startY) * currentTileSize;
-
-      // Convert screen coordinates to world coordinates
-      const mouseWorldX =
-        startX + (canvasX - width / 2 + offsetX) / currentTileSize;
-      const mouseWorldY =
-        startY + (canvasY - height / 2 + offsetY) / currentTileSize;
-
-      // Round to get the tile coordinates
-      const tileX = Math.floor(mouseWorldX);
-      const tileY = Math.floor(mouseWorldY);
-
-      // Check if mouse is over a valid tile
-      if (
-        tileX < 0 ||
-        tileX >= WORLD_GRID_WIDTH ||
-        tileY < 0 ||
-        tileY >= WORLD_GRID_HEIGHT
-      ) {
-        return null;
-      }
-
-      return { x: tileX, y: tileY };
-    },
-    [camera, tileSize, width, height, calculateTileSize, getVisibleGridCells]
-  );
-
-  // Handle mouse drag for panning
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only start dragging on left mouse button (button 0)
-    if (e.button === 0) {
-      setIsDragging(true);
-      setDragStartPos({ x: e.clientX, y: e.clientY });
-    }
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      // Update hover info
-      const coords = screenToWorldCoords(e.clientX, e.clientY);
-      if (!coords) {
-        setHoverTileInfo(null);
-        setHoverTileCoords(null);
-        return;
-      }
-
-      const { x, y } = coords;
-      setHoverTileCoords({ x, y });
-
-      // Get detailed info for this tile
-      const tileInfo = worldGeneratorRef.current.getDebugInfo(x, y);
-      setHoverTileInfo(tileInfo);
-
-      // Handle dragging
-      if (isDragging) {
-        const dx = e.clientX - dragStartPos.x;
-        const dy = e.clientY - dragStartPos.y;
-
-        // Calculate the new camera position - move in the opposite direction of drag
-        const newX = camera.x - dx / (tileSize * camera.zoom);
-        const newY = camera.y - dy / (tileSize * camera.zoom);
-
-        // Calculate how many tiles are visible at current zoom level
-        const currentTileSize = tileSize * camera.zoom;
-        const visibleTilesX = width / currentTileSize;
-        const visibleTilesY = height / currentTileSize;
-
-        // Calculate boundaries to ensure map stays visible
-        const minX = visibleTilesX / 2;
-        const maxX = WORLD_GRID_WIDTH - visibleTilesX / 2;
-        const minY = visibleTilesY / 2;
-        const maxY = WORLD_GRID_HEIGHT - visibleTilesY / 2;
-
-        // Clamp camera position to keep map in view
-        const clampedX = Math.max(minX, Math.min(maxX, newX));
-        const clampedY = Math.max(minY, Math.min(maxY, newY));
-
-        setCamera((prevCamera) => ({
-          ...prevCamera,
-          x: clampedX,
-          y: clampedY,
-        }));
-        setDragStartPos({ x: e.clientX, y: e.clientY }); // Update drag start position
-        setMapChanged(true);
-      }
-    },
-    [
-      isDragging,
-      dragStartPos,
-      camera.x,
-      camera.y,
-      camera.zoom,
-      tileSize,
-      width,
-      height,
-      screenToWorldCoords,
-    ]
-  );
-
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    if (e.button === 0) {
-      // Only handle left mouse button
-      setIsDragging(false);
-    }
-  }, []);
-
-  // Global mouse up handler to release drag even if mouse up occurs outside canvas
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    // Add the event listener to the window
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-
-    // Clean up
-    return () => {
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, []);
-
-  // Handle mouse click to select a tile
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      // Skip tile selection if we've been dragging
-      if (isDragging) {
-        return;
-      }
-
-      const coords = screenToWorldCoords(e.clientX, e.clientY);
-      if (!coords) {
-        return;
-      }
-
-      const { x, y } = coords;
-      setSelectedTileCoords({ x, y });
-
-      // Get detailed info for this tile
-      const tileInfo = worldGeneratorRef.current.getDebugInfo(x, y);
-      setSelectedTileInfo(tileInfo);
-    },
-    [screenToWorldCoords, isDragging]
-  );
 
   // Handle mouse wheel for zooming
   const handleWheel = useCallback(
@@ -780,6 +1079,44 @@ const WorldMap: React.FC<WorldMapProps> = ({
     [camera.zoom, width, height, tileSize]
   );
 
+  // Handler for TileInfoPanel zoom to tile action
+  const handleZoomToTile = useCallback(
+    (x: number, y: number) => {
+      handleZoomToCoordinates(x, y, 2.0); // Use a higher zoom level (2.0) for better detail
+    },
+    [handleZoomToCoordinates]
+  );
+
+  // Handler for claim tile action - placeholder for now
+  const handleClaimTile = useCallback(
+    (x: number, y: number) => {
+      console.log(`Claim tile at (${x}, ${y}) - to be implemented in Phase 2`);
+      // This will be implemented in Phase 2 with backend integration
+      alert(`Tile claim feature will be available in the next phase of development.`);
+    },
+    []
+  );
+
+  // Handler for view auction action - placeholder for now
+  const handleViewAuction = useCallback(
+    (x: number, y: number) => {
+      console.log(`View auction for tile at (${x}, ${y}) - to be implemented in Phase 2`);
+      // This will be implemented in Phase 2 with backend integration
+      alert(`Auction view feature will be available in the next phase of development.`);
+    },
+    []
+  );
+
+  // Clean up any animation frames on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRequestRef.current) {
+        cancelAnimationFrame(animationRequestRef.current);
+        animationRequestRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <div className="relative w-full h-full">
       <canvas
@@ -787,7 +1124,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         width={width}
         height={height}
         onMouseMove={handleMouseMove}
-        onClick={handleClick}
+        onClick={handleCanvasClick}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
@@ -802,9 +1139,23 @@ const WorldMap: React.FC<WorldMapProps> = ({
       )}
       */}
 
-      {/* Hover tile info panel */}
-      {/*
-      {hoverTileInfo && hoverTileCoords && (
+      {/* Tile Info Panel - Selected Tile */}
+      {selectedTileInfo && selectedTileCoords && (
+        <TileInfoPanel
+          tileInfo={selectedTileInfo}
+          position="selected"
+          coordinates={selectedTileCoords}
+          onZoomToTile={handleZoomToTile}
+          onClaimTile={handleClaimTile}
+          onViewAuction={handleViewAuction}
+          // These would come from backend in the future
+          isOwned={false}
+          isForSale={false}
+        />
+      )}
+
+      {/* Tile Info Panel - Hover */}
+      {hoverTileInfo && hoverTileCoords && !isDragging && (
         <TileInfoPanel
           tileInfo={hoverTileInfo}
           position="hover"
@@ -812,19 +1163,15 @@ const WorldMap: React.FC<WorldMapProps> = ({
         />
       )}
 
-      {/* Selected tile info panel */}
-
-      {selectedTileInfo && selectedTileCoords && (
-        <TileInfoPanel
-          tileInfo={selectedTileInfo}
-          position="selected"
-          coordinates={selectedTileCoords}
-        />
-      )}
-
-      {/* Navigation controls
-      <NavigationControls onPan={handlePan} onZoom={handleZoom} />
-      */}
+      {/* Navigation Controls */}
+      <NavigationControls
+        onPan={handlePan}
+        onZoom={handleZoom}
+        onZoomToCoordinates={handleZoomToCoordinates}
+        onResetZoom={handleResetZoom}
+        selectedTileCoords={selectedTileCoords}
+        hasSelection={selectedTiles.length > 0}
+      />
 
       {/* Progress bar overlay */}
       {isGenerating && <ProgressBar progress={generationProgress} />}
