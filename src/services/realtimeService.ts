@@ -70,7 +70,10 @@ class RealtimeService {
       
       // Create Socket.IO connection with auth token
       this.socket = socketio(process.env.NEXT_PUBLIC_WEBSOCKET_URL, {
-        auth: token ? { token } : {},
+        auth: token ? { 
+          token,
+          allowPublish: true // Allow publishing events
+        } : {},
         transports: ['websocket']
       });
       

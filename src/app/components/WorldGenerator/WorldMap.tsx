@@ -51,6 +51,9 @@ import { rgbToString } from "./terrainUtils";
 import ProgressBar from "./UI/ProgressBar";
 import NavigationControls from "./UI/NavigationControls";
 import TileInfoPanel from "./UI/TileInfoPanel";
+import tileGenerationService from "@/services/tileGenerationService";
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 // Define the ContinentalFalloffParams interface
 export interface ContinentalFalloffParams {
@@ -168,6 +171,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
   isGenerating = false,
   generationProgress = 0,
 }) => {
+  // Add the router inside the component
+  const router = useRouter();
+  const { user } = useAuth();
+
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -221,6 +228,16 @@ const WorldMap: React.FC<WorldMapProps> = ({
     y: number;
     progress: number;
   }>({ active: false, x: 0, y: 0, progress: 0 });
+
+  // Add state for tile ownership info
+  const [selectedTileOwnership, setSelectedTileOwnership] = useState<{
+    owned: boolean;
+    inAuction: boolean;
+    owner?: string;
+  }>({
+    owned: false,
+    inAuction: false
+  });
 
   // Create world generator with specified parameters
   const worldGeneratorRef = useRef<WorldGenerator>(
@@ -929,6 +946,31 @@ const WorldMap: React.FC<WorldMapProps> = ({
     [camera, tileSize, selectedTiles, isDragging, screenToWorldCoords]
   );
 
+  // Check ownership status when a tile is selected
+  useEffect(() => {
+    if (selectedTileCoords) {
+      const checkOwnership = async () => {
+        try {
+          const { x, y } = selectedTileCoords;
+          const tileInfo = await tileGenerationService.checkTileAvailability(x, y);
+          setSelectedTileOwnership({
+            owned: tileInfo.owned,
+            inAuction: tileInfo.inAuction,
+            owner: tileInfo.owner
+          });
+        } catch (error) {
+          console.error('Error checking tile ownership:', error);
+          setSelectedTileOwnership({
+            owned: false,
+            inAuction: false
+          });
+        }
+      };
+      
+      checkOwnership();
+    }
+  }, [selectedTileCoords]);
+
   // Main rendering loop - updates the canvas when needed
   useEffect(() => {
     // Skip rendering if nothing changed
@@ -1088,24 +1130,94 @@ const WorldMap: React.FC<WorldMapProps> = ({
   );
 
   // Handler for claim tile action - placeholder for now
-  const handleClaimTile = useCallback(
-    (x: number, y: number) => {
-      console.log(`Claim tile at (${x}, ${y}) - to be implemented in Phase 2`);
-      // This will be implemented in Phase 2 with backend integration
-      alert(`Tile claim feature will be available in the next phase of development.`);
-    },
-    []
-  );
+  const handleClaimTile = useCallback(async (x: number, y: number) => {
+    if (!user) {
+      alert('You must be logged in to claim a tile');
+      return;
+    }
+    
+    try {
+      // Check if the tile is available
+      const tileInfo = await tileGenerationService.checkTileAvailability(x, y);
+      
+      if (tileInfo.owned) {
+        alert('This tile is already owned');
+        return;
+      }
+      
+      if (tileInfo.inAuction) {
+        // If the tile is in an auction, let the user know
+        alert('This tile is currently up for auction');
+        if (tileInfo.auctionId) {
+          router.push(`/auctions/${tileInfo.auctionId}`);
+        }
+        return;
+      }
+      
+      // If tile doesn't exist in the backend yet, make a note of this
+      if (!tileInfo.exists) {
+        console.log('Tile does not exist in the database yet, will need to be created');
+        // This is handled by the backend when claiming
+      }
+      
+      // Call the claim API
+      const response = await fetch('/api/land/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          x, 
+          y
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to claim tile');
+      }
+      
+      const data = await response.json();
+      
+      // Show success message
+      alert('Tile claimed successfully!');
+      
+      // Refresh the tile data
+      const updatedTileInfo = await tileGenerationService.checkTileAvailability(x, y);
+      
+      // Update UI to show ownership
+      // This would need to be implemented with additional UI state
+      
+    } catch (error: any) {
+      console.error('Error claiming tile:', error);
+      alert(`Failed to claim tile: ${error.message}`);
+    }
+  }, [user, router]);
 
-  // Handler for view auction action - placeholder for now
-  const handleViewAuction = useCallback(
-    (x: number, y: number) => {
-      console.log(`View auction for tile at (${x}, ${y}) - to be implemented in Phase 2`);
-      // This will be implemented in Phase 2 with backend integration
-      alert(`Auction view feature will be available in the next phase of development.`);
-    },
-    []
-  );
+  // Add/update the handleViewAuction function
+  const handleViewAuction = useCallback(async (x: number, y: number) => {
+    try {
+      // Check if the tile is in an auction
+      const tileInfo = await tileGenerationService.checkTileAvailability(x, y);
+      
+      if (tileInfo.inAuction && tileInfo.auctionId) {
+        // If the tile is in an auction, navigate to the auction page
+        router.push(`/auctions/${tileInfo.auctionId}`);
+      } else if (tileInfo.exists) {
+        // If the tile exists but isn't in an auction, show message or open sidebar
+        console.log('Tile exists but is not currently in an auction');
+        
+        // Toggle the auction sidebar (you would need to implement this state)
+        // setShowAuctionSidebar(true);
+      } else {
+        // If the tile doesn't exist in the database, it's not available for auction
+        console.log('This tile is not registered in the system');
+      }
+    } catch (error) {
+      console.error('Error checking auction status:', error);
+    }
+  }, [router]);
 
   // Clean up any animation frames on unmount
   useEffect(() => {
@@ -1116,6 +1228,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
       }
     };
   }, []);
+
+  // Add useEffect to set the world generator in tileGenerationService
+  useEffect(() => {
+    if (worldGeneratorRef.current) {
+      tileGenerationService.setWorldGenerator(worldGeneratorRef.current);
+      console.log('World generator set in tileGenerationService');
+    }
+  }, [worldGeneratorRef.current]); // Only run when worldGenerator is initialized
 
   return (
     <div className="relative w-full h-full">
@@ -1148,9 +1268,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
           onZoomToTile={handleZoomToTile}
           onClaimTile={handleClaimTile}
           onViewAuction={handleViewAuction}
-          // These would come from backend in the future
-          isOwned={false}
-          isForSale={false}
+          // Pass the ownership information
+          isOwned={selectedTileOwnership.owned}
+          isForSale={selectedTileOwnership.inAuction}
+          owner={selectedTileOwnership.owner}
         />
       )}
 
