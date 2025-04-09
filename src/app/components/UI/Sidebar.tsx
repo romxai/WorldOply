@@ -3,7 +3,7 @@ import Image from "next/image";
 import Profile from "./SidebarContent/Profile";
 import Auction from "./SidebarContent/Auction";
 import Marketplace from "./SidebarContent/Marketplace";
-import MyTiles from "./SidebarContent/MyTiles";
+import MyLands from "./SidebarContent/MyLands";
 import Settings from "./SidebarContent/Settings";
 import Logout from "./SidebarContent/Logout";
 import Chat from "./SidebarContent/Chat";
@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, sidebarType, onClose }) => {
       case "marketplace":
         return <Marketplace />;
       case "myTiles":
-        return <MyTiles />;
+        return <MyLands />;
       case "settings":
         return <Settings />;
       case "logout":

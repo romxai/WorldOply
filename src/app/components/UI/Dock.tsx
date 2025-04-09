@@ -202,7 +202,7 @@ const Dock: React.FC = () => {
     },
     {
       icon: <TilesIcon />,
-      label: "My Tiles",
+      label: "My Lands",
       onClick: () => openSidebar("myTiles"),
     },
     {
