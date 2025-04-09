@@ -80,6 +80,13 @@ export default function Game() {
           Profile
         </button>
         <button 
+          onClick={() => handleSidebarToggle("chat")}
+          className="bg-amber-700 text-white px-3 py-2 rounded-md shadow-md font-pixel text-sm flex items-center justify-between"
+        >
+          <span>Chat</span>
+          <div className="bg-green-500 w-2 h-2 rounded-full ml-2"></div>
+        </button>
+        <button 
           onClick={() => handleSidebarToggle("myTiles")}
           className="bg-amber-700 text-white px-3 py-2 rounded-md shadow-md font-pixel text-sm"
         >

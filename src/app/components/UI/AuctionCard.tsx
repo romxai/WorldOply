@@ -6,10 +6,9 @@ import Link from 'next/link';
 
 interface AuctionCardProps {
   auction: AuctionItem;
-  onZoomToTile?: (x: number, y: number) => void;
 }
 
-const AuctionCard: React.FC<AuctionCardProps> = ({ auction, onZoomToTile }) => {
+const AuctionCard: React.FC<AuctionCardProps> = ({ auction }) => {
   const { user } = useAuth();
   
   // Format currency
@@ -129,14 +128,6 @@ const AuctionCard: React.FC<AuctionCardProps> = ({ auction, onZoomToTile }) => {
   
   const mainTile = getMainTile();
   
-  // Handle zoom to tile click
-  const handleZoomToTile = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (mainTile && onZoomToTile) {
-      onZoomToTile(mainTile.x, mainTile.y);
-    }
-  };
-  
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow">
       <div className="p-4">
@@ -204,23 +195,13 @@ const AuctionCard: React.FC<AuctionCardProps> = ({ auction, onZoomToTile }) => {
       </div>
       
       <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            {mainTile && onZoomToTile && (
-              <button
-                onClick={handleZoomToTile}
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                Go to Tile
-              </button>
-            )}
-            <Link 
-              href={`/world?x=${mainTile?.x || 0}&y=${mainTile?.y || 0}`}
-              className="text-blue-600 hover:text-blue-800 text-sm"
-            >
-              View on Map
-            </Link>
-          </div>
+        <div className="flex justify-between">
+          <Link 
+            href={`/world?x=${mainTile?.x || 0}&y=${mainTile?.y || 0}`}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            View on Map
+          </Link>
           
           <Link 
             href={isActive() ? `/auctions/${auction._id}` : '#'} 

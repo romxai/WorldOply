@@ -6,6 +6,7 @@ import Marketplace from "./SidebarContent/Marketplace";
 import MyTiles from "./SidebarContent/MyTiles";
 import Settings from "./SidebarContent/Settings";
 import Logout from "./SidebarContent/Logout";
+import Chat from "./SidebarContent/Chat";
 
 export type SidebarType =
   | "profile"
@@ -14,6 +15,7 @@ export type SidebarType =
   | "myTiles"
   | "settings"
   | "logout"
+  | "chat"
   | null;
 
 interface SidebarProps {
@@ -47,6 +49,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, sidebarType, onClose }) => {
         return <Settings />;
       case "logout":
         return <Logout onConfirm={onClose} />;
+      case "chat":
+        return <Chat isVisible={true} />;
       default:
         return null;
     }
